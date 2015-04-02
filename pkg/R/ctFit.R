@@ -1639,29 +1639,6 @@ if(objective!='Kalman') { #configure matrices
   
   
   
-  
-  
-  
-  
-  
-  
-
-  
- 
-  
-  
-
-
-  
-
-
-  
-  
-
-  
-
-  
-
 
   
   
@@ -1696,16 +1673,16 @@ if(objective!='Kalman') { #configure matrices
   if(carefulFit==TRUE) {
     carefulFit<-FALSE
     #     browser()
-    mxobj<-suppressWarnings(OpenMx::mxRun(model)) #fit with the penalised likelihood
+    mxobj<-try(suppressWarnings(OpenMx::mxRun(model))) #fit with the penalised likelihood
     #     mxobj<-OpenMx::mxRun(model) #fit with the penalised likelihood
-    newstarts <- omxGetParameters(mxobj) #get the params
+    newstarts <- try(omxGetParameters(mxobj)) #get the params
     if(showInits==TRUE) {
       message('Generated inits from carefulFit=TRUE')
       message(paste(names(newstarts), ": ", newstarts, "\n"))
     }
     model<-originalmodel #revert to our single layer model without the penalties fit function
     #     model<-OpenMx::mxModel(model, 'penalties', remove=TRUE) #and remove the penalties object
-    model<-omxSetParameters(model, labels=names(newstarts), values=newstarts) #set the params of it
+    if(class(newstarts)!="try-error") model<-omxSetParameters(model, labels=names(newstarts), values=newstarts) #set the params of it
     #     objective<-targetObjective #revert our objective to whatever was specified
     #     setobjective() #and set it
   }
@@ -1732,7 +1709,7 @@ if(objective!='Kalman') { #configure matrices
     }
     
     #     if(retryattempts > 0){ 
-    mxobj <- OpenMx::mxTryHard(model, useOptimizer = useOptimizer, 
+    mxobj <- OpenMx::mxTryHard(model, 
       fit2beat = fit2beat, showInits=showInits, checkHess=FALSE, greenOK=TRUE, 
       #         intervals = ifelse(!is.null(confidenceintervals), TRUE, FALSE), 
       #         confidenceintervals=confidenceintervals, 
