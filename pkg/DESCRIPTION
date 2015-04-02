@@ -39,9 +39,9 @@ Description: ctsem is an R package for continuous time structural equation
     also of course be applicable for modelling of datasets where the
     observations are regularly spaced.
 License: GPL-3
-Depends: R (>= 3.0.0), OpenMx (>= 2.0)
+Depends: R (>= 3.0.0)
 URL:
-Imports:  MASS
+Imports:  MASS, OpenMx (>= 2.0)
 Additional_repositories: http://openmx.psyc.virginia.edu/OpenMx2/
 LazyData: Yes
 VignetteBuilder: knitr

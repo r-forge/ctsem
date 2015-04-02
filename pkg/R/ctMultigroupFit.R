@@ -40,7 +40,7 @@
 #' basemodel<-ctModel(n.latent=1, n.manifest=3, Tpoints=20,
 #'                    LAMBDA=matrix(c(1, 'lambda2', 'lambda3'), nrow=3, ncol=1),
 #'                    MANIFESTMEANS=matrix(c(0, 'manifestmean2', 'manifestmean3'), 
-#'                    nrow=3, ncol=1))
+#'                    nrow=3, ncol=1), TRAITVAR = 'auto')
 #' 
 #' freemodel<-basemodel
 #' freemodel$LAMBDA[3,1]<-'groupfree'
@@ -53,11 +53,6 @@
 #' 
 #' \dontrun{
 #' #fixed model approach
-#' data(ctExample4)
-#' basemodel<-ctModel(n.latent=1, n.manifest=3, Tpoints=20,
-#'                    LAMBDA=matrix(c(1, 'lambda2', 'lambda3'), nrow=3, ncol=1),
-#'                    MANIFESTMEANS=matrix(c(0, 'manifestmean2', 'manifestmean3'), 
-#'                    nrow=3, ncol=1))
 #' fixedmodel<-basemodel
 #' fixedmodel$LAMBDA[2,1]<-'groupfixed'
 #' groups<-paste0('g',rep(1:2, each=10),'_')

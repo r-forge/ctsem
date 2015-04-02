@@ -23,13 +23,12 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' @param TDpredtype if "impulse" (default) TDpredictors input a single shock.  
 #' If "level" they alter the base level of process, in some sense a variable CINT.
 #' @param objective 'auto' chooses either 'Kalman', if fitting to single subject data, 
-#' or one of 'mxFIML' or 'mxRAM', depending on whether you include predictors or not.
-#' For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} function from OpenMx to 
-#' implement the Kalman filter. For more than one subject, 
-#' a wide format SEM with a row of data per subject 
-#' 'mxFIML' uses the mxExpectationML function from OpenMx, 
-#' but is not yet implemented for predictors. Thus, when using predictors, 
-#' 'mxRAM' is used, though it is a generally slower alternative.
+#' or 'mxRAM'. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} 
+#' function from OpenMx to implement the Kalman filter. 
+#' For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject. 
+#' 'mxFIML' is an alternative to 'mxRAM' which uses the mxExpectationML function from OpenMx, 
+#' this is faster but is not yet implemented for predictors, and requires the OpenMx library
+#' to be loaded via \code{library(OpenMx)} before use. 
 #' See \code{\link{ctMultigroupFit}} for the possibility to apply the Kalman filter over multiple subjects)
 #' @param stationary Character vector of T0 matrix names to constrain to stationarity.  
 #' Defaults to c('T0TRAITEFFECT', 'T0TIPREDEFFECT'), constraining only the between subject difference effects. 
@@ -37,7 +36,10 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' set to 'all' to constrain all T0 matrices to stationarity. 
 #' @param reasonable if TRUE, constrain variance parameters to positive values. 
 #' (speeds optimization, can help to optimize to a global optimum, but can also hinder)
-#' @param npsol if TRUE, set OpenMx to use NPSOL optimizer globally, if FALSE use CSOLNP.
+#' @param optimizer character string, defaults to the open-source 'CSOLNP' optimizer that is distributed
+#' in all versions of OpenMx. However, 'NPSOL' generally performs a little better for these problems 
+#' and is the recommended option. This requires that you have installed OpenMx manually, by running:
+#' \code{source('http://openmx.psyc.virginia.edu/getOpenMx.R')} 
 #' @param showInits if TRUE, prints the list of user specified and auto generated 
 #' starting values for free parameters.
 #' @param retryattempts Number of times to retry the start value randomisation and fit procedure, if non-convergance or uncertain fits occur.
@@ -53,9 +55,6 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' output checkpoint file to working directory, then creates a plot for each parameter's values over iterations.
 #' @param meanintervals Use average time intervals for each column for calculation 
 #' (both faster and inaccurate to the extent that intervals vary across individuals).
-#' @param useOptimizer if FALSE, do not estimate parameters, output unfitted \code{\link{mxModel}} object directly.
-#' @param discreteModel Fit discrete autoregressive model instead of continuous - ignores time intervals.  
-#' Only partially implemented!.
 #'
 #'  @details
 #'  DATA STRUCTURE:
@@ -110,14 +109,14 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL, 
   TDpredtype="impulse", objective='auto', 
   stationary=c('T0TRAITEFFECT', 'T0TIPREDEFFECT'), 
-  reasonable = TRUE, npsol=TRUE, 
+  reasonable = TRUE, optimizer='CSOLNP', 
   retryattempts=12, iterationSummary=TRUE, fit2beat=Inf, carefulFit=TRUE,  
   showInits=FALSE, 
   meanintervals=FALSE, plotOptimization=F, 
-  useOptimizer = TRUE, nofit = FALSE,   
-  discreteModel=FALSE){
+  nofit = FALSE){
   
-
+    
+  discreteModel=FALSE # removed from function arguments temporarily
 #   require(OpenMx)
 
   n.latent<-ctmodelobj$n.latent
@@ -134,15 +133,15 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   
   #determine objective based on number of rows
   if(objective=='auto' & nrow(datawide) == 1) objective<-'Kalman'
-  if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred ==0 ) objective<-'mxFIML'
+  if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred ==0 ) objective<-'mxRAM'
   if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred >0 ) objective<-'mxRAM'
   if(objective=='mxFIML' & n.TIpred + n.TDpred > 0) warning('mxFIML objective not functioning correctly for predictors!')
   
   #capture arguments
-  ctfitargs<- list(confidenceintervals, TDpredtype, stationary, reasonable, npsol, 
-    retryattempts, fit2beat, carefulFit, showInits, meanintervals, useOptimizer, nofit, discreteModel, objective)
-  names(ctfitargs)<-c('confidenceintervals', 'TDpredtype', 'stationary', 'reasonable', 'npsol', 
-    'retryattempts', 'fit2beat', 'carefulFit', 'showInits', 'meanintervals', 'useOptimizer', 'nofit', 'discreteModel', 'objective')
+  ctfitargs<- list(confidenceintervals, TDpredtype, stationary, reasonable, optimizer, 
+    retryattempts, fit2beat, carefulFit, showInits, meanintervals, nofit, objective)
+  names(ctfitargs)<-c('confidenceintervals', 'TDpredtype', 'stationary', 'reasonable', 'optimizer', 
+    'retryattempts', 'fit2beat', 'carefulFit', 'showInits', 'meanintervals', 'nofit', 'objective')
   
   #ensure data is a matrix
   datawide<-as.matrix(datawide)
@@ -154,21 +153,24 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   
   
   ####0 variance predictor fix
-  if(n.TDpred>0 & objective != 'Kalman') { #check for 0 variance predictors for random predictors implementation (not needed for Kalman because fixed)
-    if(any(diag(var(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))]))==0)){
-      tdpreds<-datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))]
-      problemcols<-colnames(tdpreds)[round(diag(var(tdpreds)), digits=3)==0]
+  if(n.TDpred>0 & objective != 'Kalman'){ #check for 0 variance predictors for random predictors implementation (not needed for Kalman because fixed predictors)
+    if(any(diag(var(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))]))==0) & 
+        all(is.na(suppressWarnings(as.numeric(ctmodelobj$TDPREDVAR)))) ) {
       
-      problempreds<-unlist(lapply(TDpredNames, function(x) if(any(unlist(regexec(x, problemcols))==1)) return (x)))
-      
-      message(paste0('Time dependent predictors with 0 variance detected - adding noise with SD 0.1 to predictors: ', 
-        paste(problempreds, collapse=', ')))
-      
-      datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))] <- 
-        datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))] +
-        rnorm(length(datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))]), 0, .1)
+      ctmodelobj$TDPREDVAR <- diag(.1,n.TDpred*(Tpoints-1))
+#       tdpreds<-datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))]
+#       problemcols<-colnames(tdpreds)[round(diag(var(tdpreds)), digits=3)==0]
+#       
+#       problempreds<-unlist(lapply(TDpredNames, function(x) if(any(unlist(regexec(x, problemcols))==1)) return (x)))
+
+      message(paste0('Time dependent predictors with 0 variance and free TDPREDVAR matrix detected - fixing TDPREDVAR matrix to diagonal 0.1 matrix to 
+allow estimation, but better to fix relevant portions manually.')) 
+#         paste(problempreds, collapse=', ')))
+#       
+#       datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))] <- 
+#         datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))] +
+#         rnorm(length(datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))]), 0, .1)
     }
-    
   }
   
   
@@ -1194,11 +1196,11 @@ if(objective!='Kalman') { #configure matrices
     
     
     #model options
-    if(npsol==TRUE) {
+    if(optimizer==TRUE) {
       message("Setting NPSOL optimizer for OpenMx temporarily") 
       mxOption(NULL, "Default optimizer", "NPSOL")
     }
-    if(npsol==FALSE) {
+    if(optimizer==FALSE) {
       message("Setting CSOLNP optimizer for OpenMx temporarily") 
       mxOption(NULL, "Default optimizer", "CSOLNP")
     }

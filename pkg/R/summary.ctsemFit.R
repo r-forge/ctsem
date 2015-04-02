@@ -25,8 +25,7 @@ summary.ctsemFit<-function(object,...){
   manifestNames<-object$ctmodelobj$manifestNames
   
   
-  
-  if(object$ctfitargs$discreteModel==FALSE){
+
     
     
     DRIFT<-tryCatch({ object$mxobj$DRIFT$values}, error=function(e) e )
@@ -295,7 +294,7 @@ summary.ctsemFit<-function(object,...){
     } # end TIpred section
    
     ctsummary<-mget(outlist) 
-  }#end summary from continuous params
+  #end summary from continuous params
   
   ##Openmx params
 

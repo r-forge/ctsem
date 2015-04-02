@@ -7,10 +7,9 @@
 ctFit(datawide, ctmodelobj, confidenceintervals = NULL,
   TDpredtype = "impulse", objective = "auto",
   stationary = c("T0TRAITEFFECT", "T0TIPREDEFFECT"), reasonable = TRUE,
-  npsol = TRUE, retryattempts = 12, iterationSummary = TRUE,
-  fit2beat = Inf, carefulFit = FALSE, showInits = FALSE,
-  meanintervals = FALSE, plotOptimization = F, useOptimizer = TRUE,
-  nofit = FALSE, discreteModel = FALSE)
+  optimizer = "CSOLNP", retryattempts = 12, iterationSummary = TRUE,
+  fit2beat = Inf, carefulFit = TRUE, showInits = FALSE,
+  meanintervals = FALSE, plotOptimization = F, nofit = FALSE)
 }
 \arguments{
 \item{datawide}{the data you wish to fit a ctsem model to.}
@@ -24,13 +23,12 @@ to calculate 95\% confidence intervals for.  e.g. c("DRIFT", "TRAITVAR")}
 If "level" they alter the base level of process, in some sense a variable CINT.}
 
 \item{objective}{'auto' chooses either 'Kalman', if fitting to single subject data,
-or one of 'mxFIML' or 'mxRAM', depending on whether you include predictors or not.
-For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} function from OpenMx to
-implement the Kalman filter. For more than one subject,
-a wide format SEM with a row of data per subject
-'mxFIML' uses the mxExpectationML function from OpenMx,
-but is not yet implemented for predictors. Thus, when using predictors,
-'mxRAM' is used, though it is a generally slower alternative.
+or 'mxRAM'. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}}
+function from OpenMx to implement the Kalman filter.
+For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject.
+'mxFIML' is an alternative to 'mxRAM' which uses the mxExpectationML function from OpenMx,
+this is faster but is not yet implemented for predictors, and requires the OpenMx library
+to be loaded via \code{library(OpenMx)} before use.
 See \code{\link{ctMultigroupFit}} for the possibility to apply the Kalman filter over multiple subjects)}
 
 \item{stationary}{Character vector of T0 matrix names to constrain to stationarity.
@@ -41,7 +39,10 @@ set to 'all' to constrain all T0 matrices to stationarity.}
 \item{reasonable}{if TRUE, constrain variance parameters to positive values.
 (speeds optimization, can help to optimize to a global optimum, but can also hinder)}
 
-\item{npsol}{if TRUE, set OpenMx to use NPSOL optimizer globally, if FALSE use CSOLNP.}
+\item{optimizer}{character string, defaults to the open-source 'CSOLNP' optimizer that is distributed
+in all versions of OpenMx. However, 'NPSOL' generally performs a little better for these problems
+and is the recommended option. This requires that you have installed OpenMx manually, by running:
+\code{source('http://openmx.psyc.virginia.edu/getOpenMx.R')}}
 
 \item{retryattempts}{Number of times to retry the start value randomisation and fit procedure, if non-convergance or uncertain fits occur.}
 
@@ -65,12 +66,7 @@ starting values for free parameters.}
 \item{plotOptimization}{If TRUE, uses checkpointing for \code{\link{mxRun}}, set to checkpoint every iteration,
 output checkpoint file to working directory, then creates a plot for each parameter's values over iterations.}
 
-\item{useOptimizer}{if FALSE, do not estimate parameters, output unfitted \code{\link{mxModel}} object directly.}
-
 \item{nofit}{if TRUE, output only openmx model without fitting}
-
-\item{discreteModel}{Fit discrete autoregressive model instead of continuous - ignores time intervals.
-Only partially implemented!.}
 }
 \description{
 This function fits continuous time SEM models specified via \code{\link{ctModel}}
