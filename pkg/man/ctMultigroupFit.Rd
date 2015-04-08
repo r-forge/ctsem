@@ -68,6 +68,8 @@ by default, all parameters are free across groups.  Can also be used to easily e
 Additional \code{\link{ctFit}} parameters may be specified as required.
 }
 \examples{
+\dontrun{
+
 #Two group model, all parameters except LAMBDA[3,1] constrained across groups.
 data(ctExample4)
 basemodel<-ctModel(n.latent=1, n.manifest=3, Tpoints=20,
@@ -84,7 +86,7 @@ multif<-ctMultigroupFit(datawide=ctExample4, groupings=groups,
 summary(multif)
 
 
-\dontrun{
+
 #fixed model approach
 fixedmodel<-basemodel
 fixedmodel$LAMBDA[2,1]<-'groupfixed'

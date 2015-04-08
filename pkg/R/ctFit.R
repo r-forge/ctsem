@@ -22,13 +22,10 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' to calculate 95\% confidence intervals for.  e.g. c("DRIFT", "TRAITVAR")
 #' @param TDpredtype if "impulse" (default) TDpredictors input a single shock.  
 #' If "level" they alter the base level of process, in some sense a variable CINT.
-#' @param objective 'auto' chooses either 'Kalman', if fitting to single subject data, 
-#' or 'mxRAM'. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} 
+#' @param objective 'auto' selects either 'Kalman', if fitting to single subject data, 
+#' or 'mxRAM' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} 
 #' function from OpenMx to implement the Kalman filter. 
 #' For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject. 
-#' 'mxFIML' is an alternative to 'mxRAM' which uses the mxExpectationML function from OpenMx, 
-#' this is faster but is not yet implemented for predictors, and requires the OpenMx library
-#' to be loaded via \code{library(OpenMx)} before use. 
 #' See \code{\link{ctMultigroupFit}} for the possibility to apply the Kalman filter over multiple subjects)
 #' @param stationary Character vector of T0 matrix names to constrain to stationarity.  
 #' Defaults to c('T0TRAITEFFECT', 'T0TIPREDEFFECT'), constraining only the between subject difference effects. 
@@ -63,6 +60,7 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #'  time intervals between observations, time independent predictors.  
 #' 
 #' @examples
+#' \dontrun{
 #' 
 #' mfrowOld<-par()$mfrow
 #' par(mfrow=c(2, 3))
@@ -87,7 +85,7 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' 
 #' par(mfrow=mfrowOld)
 #' 
-#' \dontrun{
+#' 
 #' ###Oscillating model from Voelkle & Oud (2013). 
 #' data(Oscillating)
 #' oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11, 
@@ -104,7 +102,6 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' }
 #' 
 #' @export
-#' @import OpenMx
 
 ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL, 
   TDpredtype="impulse", objective='auto', 
@@ -287,7 +284,7 @@ allow estimation, but better to fix relevant portions manually.'))
       values[!is.na(inputmFixed)] <- inputmFixed[!is.na(inputmFixed)] #overwite with any fixed values
       
       if(!is.null(inits)){ #if there are some inits specified, check each part of x
-        message(paste0("Processing start values for ", x))
+#         message(paste0("Processing start values for ", x))
         for(i in 1:length(inputmCharacter)){ #for every cell in x
           if(!is.na(inputmCharacter[i])){ #if it is not NA
             if(any(inputmCharacter[i] == inits[, 1])){  #and any cells match column 1 of labelinits               
@@ -608,7 +605,7 @@ if(objective!='Kalman') { #configure matrices
     
     #manifest trait variance
     MANIFESTTRAITVAR$ref<- indexMatrix(dimension=n.manifest, symmetrical=TRUE, 
-      sep=', ', starttext='MANIFESTTRAITVAR[', endtext=']')
+      sep=',', starttext='MANIFESTTRAITVAR[', endtext=']')
     
     S$values[manifesttraitstart:traitend, manifesttraitstart:traitend] <- paste0('FFF', MANIFESTTRAITVAR$inits)
     S$labels[manifesttraitstart:traitend, manifesttraitstart:traitend] <- MANIFESTTRAITVAR$ref    
@@ -1091,19 +1088,19 @@ if(objective!='Kalman') { #configure matrices
     if('T0VAR' %in% stationary) {
       T0VAR$labels<-paste0('asymDIFFUSION[', 1:(n.latent^2), ',1]')
       T0VAR$free<-FALSE
-      asymDIFFUSIONalg<-mxAlgebra(name='asymDIFFUSION', -solve(DRIFTHATCH) %*% cvectorize(DIFFUSION))
+      asymDIFFUSIONalg<- OpenMx::mxAlgebra(name='asymDIFFUSION', -solve(DRIFTHATCH) %*% cvectorize(DIFFUSION))
     }
     if('T0MEANS' %in% stationary){
       T0MEANS$labels<-paste0('asymCINT[', 1:n.latent, ',1]')
       T0MEANS$free<-FALSE
-      asymCINTalg<-mxAlgebra(name='asymCINT', -invDRIFT %*% CINT )      
+      asymCINTalg<- OpenMx::mxAlgebra(name='asymCINT', -invDRIFT %*% CINT )      
     }
     
     
     model  <-  OpenMx::mxModel("ctsem", #type="RAM", #begin specifying the mxModel
       mxData(observed = datawide, type = "raw"), 
       
-      II <- mxMatrix(type = "Iden", nrow = n.latent, ncol = n.latent, free = FALSE, name = "II"), #identity matrix
+      mxMatrix(type = "Iden", nrow = n.latent, ncol = n.latent, free = FALSE, name = "II"), #identity matrix
       
       mxMatrix(name='LAMBDA', free=LAMBDA$free, values=LAMBDA$values, dimnames=list(manifestNames, latentNames), 
         labels=LAMBDA$labels, nrow=n.manifest, ncol=n.latent), 
@@ -1159,7 +1156,7 @@ if(objective!='Kalman') { #configure matrices
       if('T0TRAITEFFECT' %in% stationary){
         T0TRAITEFFECT$labels <-paste0('T0TRAITEFFECTalg[', 1:n.latent, ',', rep(1:n.latent, each=n.latent), ']')
         T0TRAITEFFECT$free <-FALSE
-        T0TRAITEFFECTalg<-mxAlgebra(name='T0TRAITEFFECTalg', -invDRIFT)     
+        T0TRAITEFFECTalg<- OpenMx::mxAlgebra(name='T0TRAITEFFECTalg', -invDRIFT)     
       }
       
       model <- OpenMx::mxModel(model, 
@@ -1273,7 +1270,7 @@ if(objective!='Kalman') { #configure matrices
       if('T0TIPREDEFFECT' %in% stationary){
         T0TIPREDEFFECT$labels <-paste0('asymTIPREDEFFECT[', 1:n.latent, ',', rep(1:n.latent, each=n.latent), ']')
         T0TIPREDEFFECT$free<-FALSE
-        asymTIPREDEFFECTalg<-mxAlgebra(name='asymTIPREDEFFECT', -invDRIFT %*% TIPREDEFFECT)  
+        asymTIPREDEFFECTalg<- OpenMx::mxAlgebra(name='asymTIPREDEFFECT', -invDRIFT %*% TIPREDEFFECT)  
         model<-OpenMx::mxModel(model, asymTIPREDEFFECTalg)
       }
       
@@ -1561,15 +1558,15 @@ if(objective!='Kalman') { #configure matrices
     if(carefulFit==TRUE) {
       originalmodel<-model
       
-      if(traitExtension==TRUE) penalties <- mxAlgebra(name='penalties', 
+      if(traitExtension==TRUE) penalties <- OpenMx::mxAlgebra(name='penalties', 
         sum(T0VAR*T0VAR) + sum(DRIFT*DRIFT) + sum(DIFFUSION*DIFFUSION) + sum(MANIFESTVAR*MANIFESTVAR) +
           sum(TRAITVAR * TRAITVAR))
       
-      if(manifestTraitvarExtension==TRUE & traitExtension==FALSE) penalties <- mxAlgebra(name='penalties', 
+      if(manifestTraitvarExtension==TRUE & traitExtension==FALSE) penalties <- OpenMx::mxAlgebra(name='penalties', 
         sum(T0VAR*T0VAR) + sum(DRIFT*DRIFT) + sum(DIFFUSION*DIFFUSION) + sum(MANIFESTVAR*MANIFESTVAR) +
           sum(MANIFESTTRAITVAR * MANIFESTTRAITVAR) )
       
-      if(traitExtension==FALSE & manifestTraitvarExtension==FALSE) penalties <- mxAlgebra(name='penalties', 
+      if(traitExtension==FALSE & manifestTraitvarExtension==FALSE) penalties <- OpenMx::mxAlgebra(name='penalties', 
         sum(T0VAR*T0VAR) + sum(DRIFT*DRIFT) + sum(DIFFUSION*DIFFUSION) + sum(MANIFESTVAR*MANIFESTVAR) )
       
       modelwithpenalties <- OpenMx::mxModel(model, 
@@ -1658,9 +1655,9 @@ if(objective!='Kalman') { #configure matrices
   }
   
   if(plotOptimization==T){
-    model<-mxOption(model, 'Always Checkpoint', 'Yes')
-    model<-mxOption(model, 'Checkpoint Units', 'iterations')
-    model<-mxOption(model, 'Checkpoint Count', 1)    
+    model<- OpenMx::mxOption(model, 'Always Checkpoint', 'Yes')
+    model<- OpenMx::mxOption(model, 'Checkpoint Units', 'iterations')
+    model<- OpenMx::mxOption(model, 'Checkpoint Count', 1)    
   }
   
   ###optimization options

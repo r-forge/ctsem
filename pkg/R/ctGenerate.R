@@ -9,7 +9,6 @@
 #' @param TDpredtype Time dependent predictor type to generate data for, if specified.
 #' @param asymptotes Are the parameters provided asymptotic paramters, or the regular continuous time parameters?
 #' @export
-#' @import OpenMx
 
 ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT=1,asymptotes=FALSE){
   
@@ -34,9 +33,9 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT
   
   #set up extra matrices
   DRIFTHATCH <- DRIFT %x% diag(n.latent) + diag(n.latent) %x% DRIFT #generate drifthatch
-  if(asymptotes==FALSE) dynresidualcov <- matrix(solve(DRIFTHATCH)%*%((expm(DRIFTHATCH %x% dT)) - #generate dynamic error cov from continuous value
+  if(asymptotes==FALSE) dynresidualcov <- matrix(solve(DRIFTHATCH)%*%((OpenMx::expm(DRIFTHATCH %x% dT)) - #generate dynamic error cov from continuous value
                                                   diag(1,n.latent^2))%*%rvectorize(DIFFUSION),nrow=n.latent)
-  if(asymptotes==TRUE) dynresidualcov <- matrix((diag(n.latent^2) - expm(DRIFT %x% dT) %x% expm(DRIFT %x% dT)) %*% c(DIFFUSION),nrow=n.latent)
+  if(asymptotes==TRUE) dynresidualcov <- matrix((diag(n.latent^2) - OpenMx::expm(DRIFT %x% dT) %x% OpenMx::expm(DRIFT %x% dT)) %*% c(DIFFUSION),nrow=n.latent)
   
   
   if(!all(is.numeric(T0VAR))) { #if T0VAR does not have all values fixed
@@ -60,8 +59,8 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT
       T0TRAITEFFECT<-diag(100,n.latent) #arbitrarily set it
       if(burnin==0) burnin<-200 #and ensure burnin is adequate (as for T0VAR)
     }
-if(asymptotes==FALSE) traitloading<- solve(DRIFT) %*% (expm(DRIFT %x% dT) - diag(1,n.latent)) #calc trait loadings to latents for small(continuous) traitvar
-if(asymptotes==TRUE) traitloading<-  diag(n.latent)- expm(DRIFT %x% dT)  #calc trait loadings to latents for asymptotic traitvar
+if(asymptotes==FALSE) traitloading<- solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% dT) - diag(1,n.latent)) #calc trait loadings to latents for small(continuous) traitvar
+if(asymptotes==TRUE) traitloading<-  diag(n.latent)- OpenMx::expm(DRIFT %x% dT)  #calc trait loadings to latents for asymptotic traitvar
     trait <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.latent),Sigma=TRAITVAR,tol=1) #generate trait effects    
     traiteffect<- trait %*% t(traitloading)
  
@@ -74,8 +73,8 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- expm(DRIFT %x% dT)  #calc t
   TDpreds<-matrix(NA,nrow=n.subjects,ncol=n.TDpred*(Tpoints-1))
   TDpredeffects <- matrix(0,nrow=n.subjects,ncol=n.latent*(Tpoints-1)) #create 0 TDpredeffects in case no TDpreds
   if (n.TDpred>0) { #but if TDpreds exist
-    if(TDpredtype=='level') TDpredparam <- solve(DRIFT) %*% (expm(DRIFT %x% dT) - diag(1, n.latent)) %*%  TDPREDEFFECT #calculate effect size
-    if(TDpredtype=='impulse') TDpredparam <- expm(DRIFT %x% dT) %*%  TDPREDEFFECT #calculate effect size
+    if(TDpredtype=='level') TDpredparam <- solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% dT) - diag(1, n.latent)) %*%  TDPREDEFFECT #calculate effect size
+    if(TDpredtype=='impulse') TDpredparam <- OpenMx::expm(DRIFT %x% dT) %*%  TDPREDEFFECT #calculate effect size
     TDpreds <- MASS::mvrnorm(n=n.subjects,mu=TDPREDMEANS, #generate TDpred variables from TDPREDMEANS and TDPREDVAR
                        Sigma=TDPREDVAR ,tol=1)
     
@@ -92,8 +91,8 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- expm(DRIFT %x% dT)  #calc t
   TIpreds<-matrix(NA,nrow=n.subjects,ncol=n.TIpred)
   TIpredeffects<-matrix(0,nrow=n.subjects,ncol=n.latent) #set 0 effects in case no TIpreds
   if (n.TIpred>0) { #if TIpreds exist
-    if(asymptotes==FALSE) TIPREDEFFECTdiscrete <-  solve(DRIFT) %*% (expm(DRIFT %x% dT) - diag(1, n.latent)) %*%  TIPREDEFFECT #calculte their effect
-    if(asymptotes==TRUE) TIPREDEFFECTdiscrete <-  (diag(1, n.latent) - expm(DRIFT %x% dT) ) %*%  TIPREDEFFECT #calculate their effect
+    if(asymptotes==FALSE) TIPREDEFFECTdiscrete <-  solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% dT) - diag(1, n.latent)) %*%  TIPREDEFFECT #calculte their effect
+    if(asymptotes==TRUE) TIPREDEFFECTdiscrete <-  (diag(1, n.latent) - OpenMx::expm(DRIFT %x% dT) ) %*%  TIPREDEFFECT #calculate their effect
     
     TIpreds <- matrix(
       MASS::mvrnorm(n=n.subjects,
@@ -106,7 +105,7 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- expm(DRIFT %x% dT)  #calc t
   
   ####cint
   
-  cinteffect <- matrix(solve(DRIFT) %*% (expm(DRIFT %x% dT) - diag(1, n.latent)) %*% 
+  cinteffect <- matrix(solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% dT) - diag(1, n.latent)) %*% 
                          CINT,byrow=T,nrow=n.subjects,ncol=n.latent) #continuous intercept effect
   
   
@@ -126,7 +125,7 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- expm(DRIFT %x% dT)  #calc t
   #burnin
   if(burnin>0){
     for(i in seq(n.latent+1,n.latent*(burnin+1),n.latent)){ #for every time block of latents after the first
-      drifteffect <- latents[,(i-n.latent):(i-1)] %*% t(expm(DRIFT %x% dT))#effect of past time points    
+      drifteffect <- latents[,(i-n.latent):(i-1)] %*% t(OpenMx::expm(DRIFT %x% dT))#effect of past time points    
       qeffect <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.latent),Sigma=dynresidualcov,tol=1) #effect of q noise
       
       latents[,i:(i+n.latent-1)]<-drifteffect+cinteffect+qeffect+traiteffect+TIpredeffects#sum of all constant effects at t to create latents
@@ -138,7 +137,7 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- expm(DRIFT %x% dT)  #calc t
   
   #post burnin latents (here TDpredictors are added)
   for(i in seq(n.latent+1,n.latent*Tpoints,n.latent)){ #for every time block of latents after the first
-    drifteffect <- latents[,(i-n.latent):(i-1)] %*% t(expm(DRIFT %x% dT))#effect of past time points    
+    drifteffect <- latents[,(i-n.latent):(i-1)] %*% t(OpenMx::expm(DRIFT %x% dT))#effect of past time points    
     qeffect <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.latent),Sigma=dynresidualcov,tol=1) #effect of q noise
     latents[,i:(i+n.latent-1)]<-drifteffect+cinteffect+qeffect+traiteffect+TIpredeffects+
       TDpredeffects[,(i-n.latent) : (i-1)]  #sum of all effects at t to create latents

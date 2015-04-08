@@ -32,7 +32,7 @@ summary.ctsemFit<-function(object,...){
     tryCatch({  dimnames(DRIFT)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'DRIFT')
     
-    discreteDRIFT<-tryCatch({ expm(DRIFT)}, error=function(e) e )
+    discreteDRIFT<-tryCatch({ OpenMx::expm(DRIFT)}, error=function(e) e )
     tryCatch({  dimnames(discreteDRIFT)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'discreteDRIFT')
     
@@ -65,7 +65,7 @@ summary.ctsemFit<-function(object,...){
     tryCatch({  dimnames(DIFFUSION)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'DIFFUSION')
     
-          discreteDIFFUSION<-tryCatch({ matrix(solve(DRIFTHATCH) %*% ((expm(DRIFTHATCH * 1)) - 
+          discreteDIFFUSION<-tryCatch({ matrix(solve(DRIFTHATCH) %*% ((OpenMx::expm(DRIFTHATCH * 1)) - 
         (diag(n.latent) %x% diag(n.latent)) ) %*%rvectorize(DIFFUSION), nrow=n.latent) }, error=function(e) e )
     tryCatch({  dimnames(discreteDIFFUSION)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'discreteDIFFUSION')
@@ -96,7 +96,7 @@ summary.ctsemFit<-function(object,...){
     outlist<-c(outlist,'asymTOTALVARstd')
     
     
-#     if(stationary==FALSE){ #then include base T0 matrices
+    if('T0VAR' %in% stationary){ #then include base T0 matrices
       T0VAR<-tryCatch({ object$mxobj$T0VAR$values}, error=function(e) e )
       tryCatch({  dimnames(T0VAR)<-list(latentNames,latentNames)}, error=function(e) e )
       outlist<-c(outlist,'T0VAR')
@@ -110,10 +110,13 @@ summary.ctsemFit<-function(object,...){
       tryCatch({  dimnames(T0VARstd)<-list(latentNames,latentNames)}, error=function(e) e )
       outlist<-c(outlist,'T0VARstd')
       
+    } # end T0VAR matrices
+      
+  if('T0MEANS' %in% stationary){ #then include base T0 matrices
       T0MEANS<-tryCatch({ object$mxobj$T0MEANS$values}, error=function(e) e )
       tryCatch({  rownames(T0MEANS)<-latentNames}, error=function(e) e )
       outlist<-c(outlist,'T0MEANS')
-#     }
+}
     
     
     #trait matrices
@@ -123,7 +126,7 @@ summary.ctsemFit<-function(object,...){
       tryCatch({  dimnames(TRAITVAR)<-list(latentNames,latentNames)}, error=function(e) e )
       outlist<-c(outlist,'TRAITVAR')
       
-      discreteTRAITVAR<-tryCatch({ solve(DRIFT) %*% (expm(DRIFT * 1)) - solve(DRIFT)}, error=function(e) e )
+      discreteTRAITVAR<-tryCatch({ solve(DRIFT) %*% (OpenMx::expm(DRIFT * 1)) - solve(DRIFT)}, error=function(e) e )
       tryCatch({  dimnames(discreteTRAITVAR)<-list(latentNames,latentNames)}, error=function(e) e )
       outlist<-c(outlist,'discreteTRAITVAR')
       
@@ -143,7 +146,7 @@ summary.ctsemFit<-function(object,...){
           asymTOTALVARstd<-tryCatch({ suppressWarnings(solve(sqrt(asymTOTALVARdiag)) %*% asymTOTALVAR %*% solve(sqrt(asymTOTALVARdiag)))}, error=function(e) e )
       tryCatch({  dimnames(asymTOTALVARstd)<-list(latentNames,latentNames)}, error=function(e) e )
 
-#       if(stationary==FALSE) { #then include T0 trait matrices
+      if('T0TRAITEFFECT' %in% stationary) { #then include T0 trait matrices
         
          T0TRAITEFFECT<-tryCatch({ object$mxobj$T0TRAITEFFECT$values}, error=function(e) e )
         tryCatch({  dimnames(T0TRAITEFFECT)<-list(latentNames,latentNames)}, error=function(e) e )
@@ -166,7 +169,7 @@ summary.ctsemFit<-function(object,...){
          T0TOTALVARstd<-tryCatch({ suppressWarnings(solve(sqrt(T0TOTALVARdiag)) %*% T0TOTALVAR %*% solve(sqrt(T0TOTALVARdiag)))}, error=function(e) e )
         tryCatch({  dimnames(T0TOTALVARstd)<-list(latentNames,latentNames)}, error=function(e) e )
         
-#       } #end T0 trait matrices
+      } #end T0 trait matrices
     }#end trait matrices
     
     
@@ -222,7 +225,7 @@ summary.ctsemFit<-function(object,...){
             asymTOTALVARstd<-tryCatch({suppressWarnings(solve(sqrt(asymTOTALVARdiag)) %*% asymTOTALVAR %*% solve(sqrt(asymTOTALVARdiag)))}, error=function(e) e )
               tryCatch({  dimnames(asymTOTALVARstd)<-list(latentNames,latentNames)}, error=function(e) e )
       
-#     if(stationary==FALSE) { #include TIPRED T0 matrices
+    if('TOTIPRED' %in% stationary) { #include TIPRED T0 matrices
       T0TIPREDEFFECT<-tryCatch({object$mxobj$T0TIPREDEFFECT$values}, error=function(e) e )
       tryCatch({  dimnames(T0TIPREDEFFECT)<-list(latentNames,TIpredNames)}, error=function(e) e )
       outlist<-c(outlist,'T0TIPREDEFFECT')
@@ -245,7 +248,7 @@ summary.ctsemFit<-function(object,...){
       T0TOTALVARstd<-tryCatch({suppressWarnings(solve(sqrt(T0TOTALVARdiag)) %*% T0TOTALVAR %*% solve(sqrt(T0TOTALVARdiag)))}, error=function(e) e )
       tryCatch({  dimnames(T0TOTALVARstd)<-list(latentNames,latentNames)}, error=function(e) e )
 
-#     } #end T0 TIPRED matrices
+    } #end T0 TIPRED matrices
     
     } # end TIPRED matrices
     
@@ -262,8 +265,8 @@ summary.ctsemFit<-function(object,...){
       outlist<-c(outlist,'TDPREDEFFECT')
       
 
-      if(TDpredtype=='level') discreteTDPREDEFFECT<- solve(DRIFT) %*% (expm(DRIFT) - diag(n.latent)) %*% TDPREDEFFECT
-      if(TDpredtype=='impulse') discreteTDPREDEFFECT<- expm(DRIFT) %*% TDPREDEFFECT
+      if(TDpredtype=='level') discreteTDPREDEFFECT<- solve(DRIFT) %*% (OpenMx::expm(DRIFT) - diag(n.latent)) %*% TDPREDEFFECT
+      if(TDpredtype=='impulse') discreteTDPREDEFFECT<- OpenMx::expm(DRIFT) %*% TDPREDEFFECT
       tryCatch({  dimnames(discreteTDPREDEFFECT)<-list(latentNames,TDpredNames)}, error=function(e) e )
       outlist<-c(outlist,'discreteTDPREDEFFECT')
       
@@ -297,7 +300,7 @@ summary.ctsemFit<-function(object,...){
   #end summary from continuous params
   
   ##Openmx params
-
+browser()
   omxsummary<-c(omxsummary['modelName'],omxsummary['wallTime'],omxsummary['mxVersion'],omxsummary['timestamp'],
     omxsummary['parameters'], omxsummary['estimatedParameters'], omxsummary['CI'],
     omxsummary['AIC.Mx'],omxsummary['BIC.Mx'],omxsummary['observedStatistics'],
@@ -305,47 +308,7 @@ summary.ctsemFit<-function(object,...){
     omxsummary['degreesOfFreedom'],omxsummary['Minus2LogLikelihood'] )
   
   output<-ctsummary
-#   output$ctsummary<-ctsummary
   output$omxsummary<-omxsummary
   
-  #   } #end continuous parameter transformations
-  #    discrete=FALSE
-  #   if(discrete==TRUE && is.null(object$mxobj$discreteDRIFT$values)) {
-  #     cat("DRIFT matrix (Auto and cross effects) for dT = 1\n")
-  #     print(expm(object$mxobj$DRIFT$values))
-  #     cat("\n")
-  #     cat("DIFFUSION (dynamic variance/covariance
-  #       within an individual) for dT = 1\n")
-  #     print(object$mxobj$discreteDIFFUSION$values)
-  #     cat("\n")
-  #     cat("Variance/covariance in latent processes attributed to within person processes\n")
-  # #     if(is.null(object$mxobj$discreteDIFFUSION$values)){
-  # #       discreteDIFFUSION<-matrix(object$mxobj$discreteDiffusion$values,nrow=nrow(object$mxobj$discreteDIFFUSION$values))
-  # # #       tryCatch({  dimnames(discreteDIFFUSION)<-object$mxobj$discreteDiffusion$labels
-  # #     }
-  # #     if(!is.null(
-  #     tryCatch(print(matrix(object$mxobj$withinphi$values,nrow=nrow(object$mxobj$DIFFUSION$values))),error=function(e){
-  #       print(matrix(object$mxobj$withinphi$result,nrow=nrow(object$mxobj$DIFFUSION$values)))
-  #     })
-  #     cat("\n")
-  #     if(!is.null(object$mxobj$matrices$TRAITVAR)){
-  #       cat("Variance/covariance in latent processes attributed to heterogeneity of individuals (via TRAITVAR parameters)\n")
-  #       print(matrix(object$mxobj$betweenphi$values,nrow=nrow(object$mxobj$DIFFUSION$values)))
-  #       cat("\n")
-  #       cat("Total variance/covariance in latent processes\n")
-  #       print(matrix(object$mxobj$totalphi$result,nrow=nrow(object$mxobj$DIFFUSION$values)))
-  #       cat("\n")
-  #     }
-  #     cat("Discrete CINT for dT = 1\n")
-  #     print(object$mxobj$discreteCINT$result) 
-  #     cat("\n")
-  #     
-  # #     if(!is.null(object$mxobj$matrices$TDPRED)){
-  # #       cat("Effect of time dependent predictors on latent processes for dT = 1\n")
-  # #       print(matrix(object$mxobj$betweenphi$values,nrow=nrow(object$mxobj$discreteTDPRED$values)))
-  # #       cat("\n")
-  # #     }
-  # 
-  #   }
   return(output)
 }

@@ -56,8 +56,8 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
   
   
   if(mean==TRUE){# 2. plot mean trend    
-    means<-matrix(apply(j,1,function(x) expm(DRIFT*x) %*% T0MEANS+ 
-        solve(DRIFT) %*% (expm(DRIFT*x)-diag(nrow(DRIFT))) %*% CINT),byrow=T,ncol=nrow(DRIFT))
+    means<-matrix(apply(j,1,function(x) OpenMx::expm(DRIFT*x) %*% T0MEANS+ 
+        solve(DRIFT) %*% (OpenMx::expm(DRIFT*x)-diag(nrow(DRIFT))) %*% CINT),byrow=T,ncol=nrow(DRIFT))
     if(meansylim=='auto') meansylim<- c(min(means),max(means))
     
     
@@ -81,8 +81,8 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
     if(withinVariance==TRUE){ #plot within subject variance
       DRIFTHATCH<-(DRIFT %x% diag(n.latent) + diag(n.latent) %x% DRIFT)
       withinvar<-matrix(apply(j,1,function(x) matrix( 
-        expm(DRIFT %x% x) %*% T0VAR  %*% t(expm(DRIFT %x% x)) + #initial variance
-          matrix(solve(DRIFTHATCH) %*% ((expm(DRIFTHATCH %x% x)) -  diag(n.latent^2) ) %*% #diffusion process
+        OpenMx::expm(DRIFT %x% x) %*% T0VAR  %*% t(OpenMx::expm(DRIFT %x% x)) + #initial variance
+          matrix(solve(DRIFTHATCH) %*% ((OpenMx::expm(DRIFTHATCH %x% x)) -  diag(n.latent^2) ) %*% #diffusion process
               rvectorize(DIFFUSION),nrow=n.latent),nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
         byrow=T,ncol=length(diag(n.latent)[row(diag(n.latent))>=col(diag(n.latent))]))
       
@@ -116,22 +116,22 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
 
         if(any(ctfitobj$mxobj$TRAITVAR$values != 0)) {
         traitvariance<-matrix(apply(j,1,function(x) matrix( 
-          (expm(DRIFT %x% x) %*% ( T0TRAITEFFECT) + (solve(DRIFT) %*% (expm(DRIFT %x% x) - diag(n.latent))))  %*% 
+          (OpenMx::expm(DRIFT %x% x) %*% ( T0TRAITEFFECT) + (solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% x) - diag(n.latent))))  %*% 
             TRAITVAR %*% t(
-              (expm(DRIFT %x% x) %*% ( T0TRAITEFFECT) + (solve(DRIFT) %*% (expm(DRIFT %x% x) - diag(n.latent)))) )          
+              (OpenMx::expm(DRIFT %x% x) %*% ( T0TRAITEFFECT) + (solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% x) - diag(n.latent)))) )          
           ,nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
           byrow=T,ncol=length(diag(n.latent)[row(diag(n.latent))>=col(diag(n.latent))]))
       }
       
       if(n.TIpred > 0) {
         tipredvariance<-matrix(apply(j,1,function(x) matrix( 
-#           expm(DRIFT %x% x) %*% addedT0TIPREDVAR  %*% t(expm(DRIFT %x% x)) + #initial variance
+#           OpenMx::expm(DRIFT %x% x) %*% addedT0TIPREDVAR  %*% t(OpenMx::expm(DRIFT %x% x)) + #initial variance
             
-            ( (expm(DRIFT %x% x)) %*% (T0TIPREDEFFECT ) + #T0 loading
-            (solve(DRIFT) %*%(expm(DRIFT %x% x) - diag(n.latent)) %*% TIPREDEFFECT ) ) %*% #discrete loading
+            ( (OpenMx::expm(DRIFT %x% x)) %*% (T0TIPREDEFFECT ) + #T0 loading
+            (solve(DRIFT) %*%(OpenMx::expm(DRIFT %x% x) - diag(n.latent)) %*% TIPREDEFFECT ) ) %*% #discrete loading
             TIPREDVAR %*% t( #variance of ti predictor
-              ( (expm(DRIFT %x% x)) %*% (T0TIPREDEFFECT ) + #T0 loading
-                  (solve(DRIFT) %*%(expm(DRIFT %x% x) - diag(n.latent)) %*% TIPREDEFFECT ) ) )          
+              ( (OpenMx::expm(DRIFT %x% x)) %*% (T0TIPREDEFFECT ) + #T0 loading
+                  (solve(DRIFT) %*%(OpenMx::expm(DRIFT %x% x) - diag(n.latent)) %*% TIPREDEFFECT ) ) )          
 
           ,nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
           byrow=T,ncol=length(diag(n.latent)[row(diag(n.latent))>=col(diag(n.latent))]))
@@ -163,13 +163,13 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
   
   # 3. plot autoregressive/cross-lagged coefficients as function of time interval
   
-  ar<- matrix(apply(j,1,function(x) c(diag(expm(DRIFT*x)))),ncol=nrow(DRIFT),byrow=T)
+  ar<- matrix(apply(j,1,function(x) c(diag(OpenMx::expm(DRIFT*x)))),ncol=nrow(DRIFT),byrow=T)
   
   if(standardiseCR==TRUE) standardiser<-suppressWarnings(rep(sqrt(diag(abs(asymDIFFUSION))),each=n.latent) / rep(diag(sqrt(abs(asymDIFFUSION))),times=n.latent))
   if(standardiseCR==FALSE) standardiser<-1
 
   cl<- matrix(apply(j,1,function(x) {
-    c((expm(DRIFT*x)*standardiser)[row(DRIFT)!=col(DRIFT) & mxobj$DRIFT$free==TRUE])
+    c((OpenMx::expm(DRIFT*x)*standardiser)[row(DRIFT)!=col(DRIFT) & mxobj$DRIFT$free==TRUE])
   }
   ),ncol=length(DRIFT[row(DRIFT)!=col(DRIFT) & mxobj$DRIFT$free==TRUE]),byrow=T)
   

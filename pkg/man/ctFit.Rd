@@ -22,13 +22,10 @@ to calculate 95\% confidence intervals for.  e.g. c("DRIFT", "TRAITVAR")}
 \item{TDpredtype}{if "impulse" (default) TDpredictors input a single shock.
 If "level" they alter the base level of process, in some sense a variable CINT.}
 
-\item{objective}{'auto' chooses either 'Kalman', if fitting to single subject data,
-or 'mxRAM'. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}}
+\item{objective}{'auto' selects either 'Kalman', if fitting to single subject data,
+or 'mxRAM' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}}
 function from OpenMx to implement the Kalman filter.
 For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject.
-'mxFIML' is an alternative to 'mxRAM' which uses the mxExpectationML function from OpenMx,
-this is faster but is not yet implemented for predictors, and requires the OpenMx library
-to be loaded via \code{library(OpenMx)} before use.
 See \code{\link{ctMultigroupFit}} for the possibility to apply the Kalman filter over multiple subjects)}
 
 \item{stationary}{Character vector of T0 matrix names to constrain to stationarity.
@@ -79,6 +76,8 @@ DATA STRUCTURE:
  time intervals between observations, time independent predictors.
 }
 \examples{
+\dontrun{
+
 mfrowOld<-par()$mfrow
 par(mfrow=c(2, 3))
 
@@ -102,7 +101,7 @@ plot(AnomAuthfit, wait=FALSE)
 
 par(mfrow=mfrowOld)
 
-\dontrun{
+
 ###Oscillating model from Voelkle & Oud (2013).
 data(Oscillating)
 oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11,

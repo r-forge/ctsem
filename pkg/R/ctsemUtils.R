@@ -35,12 +35,11 @@ chardiag<-function(x,dim=x){
 #' Extracts estimates from a fitted ctsem model and returns in ctsem init matrix layout
 #' @param ctfitobject ctsem fit object to extract new starting values from
 #' @export
-#' @import OpenMx
 
 ctGetInits<-function(ctfitobject){
   if(class(ctfitobject)!='ctsemFit') stop('Specified fitobject is not of class ctsemFit')
-  inits<-matrix(omxGetParameters(ctfitobject$mxobj),ncol=1)
-  inits<-cbind(names(omxGetParameters(ctfitobject$mxobj)),inits)
+  inits<-matrix(OpenMx::omxGetParameters(ctfitobject$mxobj),ncol=1)
+  inits<-cbind(names(OpenMx::omxGetParameters(ctfitobject$mxobj)),inits)
   return(inits)
 }
 

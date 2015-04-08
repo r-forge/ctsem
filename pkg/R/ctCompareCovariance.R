@@ -7,7 +7,6 @@
 #' @param varlist if "all" include all variables in dataset.  Otherwise, specify numeric vector of variables to include.
 #' @param ... additional arguments passed to plot. 
 #' @export
-#' @import OpenMx
 ctCompareCovariance<-function(ctfitobj,
   outputmatrices=FALSE,pause=TRUE,ylim=c(-1,1),varlist="all",...){ 
 
@@ -30,9 +29,9 @@ ctCompareCovariance<-function(ctfitobj,
 #   modelexp<-cov2cor(ctfitobj$mxobj$expectation$UnfilteredExpCov[manifestindices,manifestindices])
   modelexp<-cov2cor(ctfitobj$mxobj$expCov$result[1:(n.manifest*Tpoints),1:(n.manifest*Tpoints)])
   
-  mxEval(expCov,ctfitobj$mxobj,compute=T,defvar.row=nrow(datawide))
+  OpenMx::mxEval(expCov,ctfitobj$mxobj,compute=T,defvar.row=nrow(datawide))
 
-   original<-round(cov(datawide,use="pairwise.complete.obs"),digits=3) #subobtimal
+   original<-round(cor(datawide,use="pairwise.complete.obs"),digits=3) #subobtimal
   residuals <-  original-modelexp
 
   out<-list(original,modelexp,residuals)
@@ -40,6 +39,7 @@ ctCompareCovariance<-function(ctfitobj,
 
   for(i in varlist){
     for(j in varlist){
+    
       plot(rep(seq(n.manifest,Tpoints*n.manifest,n.manifest)/n.manifest,each=Tpoints)+ #x section
           seq(-.3,.3,length.out=Tpoints),#placement within x section
         (out$original[cbind(rep(seq(j,Tpoints*n.manifest,n.manifest),times=Tpoints),
@@ -48,10 +48,6 @@ ctCompareCovariance<-function(ctfitobj,
         ylab="Correlation",xlab="Measurement occasion",col="blue",pch=16,...)
       abline(v=seq(1.5,Tpoints-.5,1),col="grey",lty=2)
       
-      if(pause==T) {
-        message("Press [enter] to overlay model expected correlations")
-        readline()
-      }
       
       points(rep(seq(n.manifest,Tpoints*n.manifest,n.manifest)/n.manifest,each=Tpoints)+
           seq(-.3,.3,length.out=Tpoints),

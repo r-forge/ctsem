@@ -35,7 +35,11 @@
 #' @return Returns either an OpenMx fit object (if fitasgroup=TRUE), or a list containing 
 #' individual ctsem fit objects.
 #' @details Additional \code{\link{ctFit}} parameters may be specified as required.
-#' @examples #Two group model, all parameters except LAMBDA[3,1] constrained across groups.
+#' 
+#' @examples 
+#' \dontrun{
+#' 
+#' #Two group model, all parameters except LAMBDA[3,1] constrained across groups.
 #' data(ctExample4)
 #' basemodel<-ctModel(n.latent=1, n.manifest=3, Tpoints=20,
 #'                    LAMBDA=matrix(c(1, 'lambda2', 'lambda3'), nrow=3, ncol=1),
@@ -51,7 +55,7 @@
 #' summary(multif)
 #' 
 #' 
-#' \dontrun{
+#' 
 #' #fixed model approach
 #' fixedmodel<-basemodel
 #' fixedmodel$LAMBDA[2,1]<-'groupfixed'
@@ -65,7 +69,6 @@
 #' 
 #' @seealso \code{\link{ctFit}} and \code{\link{ctModel}}
 #' @export
-#' @import OpenMx
 
 
 ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=NA,
@@ -134,7 +137,7 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
         omxGetParameters(omxmodel) ) #and combine the two vectors
     }
     
-    omxmodel<-mxRename(omxmodel, newname=i) #change name of omxmodel for group i
+    omxmodel<- OpenMx::mxRename(omxmodel, newname=i) #change name of omxmodel for group i
       
     
     if(fitasgroup==TRUE) omxmodels[[i]]<-omxmodel #if fitting single multigroup model, add omxmodel for group i to list of omxmodels for all groups
@@ -274,9 +277,9 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
 
     if(plotOptimization==T){
 
-      fullmodel<-mxOption(fullmodel,'Always Checkpoint', 'Yes')
-      fullmodel<-mxOption(fullmodel,'Checkpoint Units', 'iterations')
-      fullmodel<-mxOption(fullmodel,'Checkpoint Count', 1)    
+      fullmodel<- OpenMx::mxOption(fullmodel,'Always Checkpoint', 'Yes')
+      fullmodel<- OpenMx::mxOption(fullmodel,'Checkpoint Units', 'iterations')
+      fullmodel<- OpenMx::mxOption(fullmodel,'Checkpoint Count', 1)    
     }
     
     multiout<-OpenMx::mxTryHard(fullmodel,
