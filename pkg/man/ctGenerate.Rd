@@ -22,6 +22,7 @@ ctGenerate(ctmodelobj, n.subjects = 1000, burnin = 0,
 }
 \description{
 This function generates data according to the specified ctsem model object,
-which must contain fixed values for parameters.
+which must contain fixed values for parameters. Not all T0 matrices are included at present,
+safest to use a high burnin (where 'high' is sufficient for the process to forget starting values'
 }
 

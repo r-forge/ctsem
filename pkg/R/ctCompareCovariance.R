@@ -1,16 +1,16 @@
 #' ctCompareCovariance
-#' Compares model implied to observed auto and cross correlations for panel data fit with ctsem. Very rough!
+#' Compares model implied to observed auto and cross correlations for panel data fit with ctsem. 
 #' @param ctfitobj Fitted model object from OpenMx or ctsem.
 #' @param outputmatrices if TRUE, output expected, observed, and residual correlation matrices as well as plots.
 #' @param pause if TRUE (default) output plots interactively, one at a time.  If FALSE, output without stopping.
-#' @param ylim Limits of y axis, passed to plot function.
 #' @param varlist if "all" include all variables in dataset.  Otherwise, specify numeric vector of variables to include.
 #' @param ... additional arguments passed to plot. 
 #' @export
 ctCompareCovariance<-function(ctfitobj,
-  outputmatrices=FALSE,pause=TRUE,ylim=c(-1,1),varlist="all",...){ 
+  outputmatrices=FALSE,pause=TRUE,varlist="all",...){ 
 
-
+  checkOpenMx('ctCompareCovariance')
+  
   if(class(ctfitobj)!="ctsemFit"){ 
     stop('Not a ctsemFit object')   
   }

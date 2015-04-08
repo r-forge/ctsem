@@ -2,7 +2,8 @@
 % Please edit documentation in R/ctLongToWide.r
 \name{ctLongToWide}
 \alias{ctLongToWide}
-\title{Restructures time series / panel data from long format to wide format for ctsem analysis}
+\title{ctLongToWide
+Restructures time series / panel data from long format to wide format for ctsem analysis}
 \usage{
 ctLongToWide(datalong, id, time, manifestNames, TDpredNames = NULL,
   TIpredNames = NULL)
@@ -24,18 +25,25 @@ any time dependent predictors, and any time independent predictors.}
 \item{TIpredNames}{vector of character strings giving column names of time independent predictor variables}
 }
 \description{
+ctLongToWide
 Restructures time series / panel data from long format to wide format for ctsem analysis
 }
 \details{
 Time column must be numeric
 }
 \examples{
-data(longexample)
- wide <- ctLongToWide(datalong=longexample, id="subject", time="Time",
-   manifestNames=c("Y1","Y2", "Y3"), TDpredNames="TD1", TIpredNames=c("TI1", "TI2"))
- wide <- ctIntervalise(datawide=wide, Tpoints=4, n.manifest=3, n.TDpred=1, n.TIpred=2,
- manifestNames=c("Y1","Y2", "Y3"), TDpredNames="TD1", TIpredNames=c("TI1", "TI2"))
- wide
+#First load the long format data with absolute times
+ data('longexample')
+
+ #Then convert to wide format
+ wideexample <- ctLongToWide(datalong = longexample, id = "subject",
+ time = "Time", manifestNames = c("Y1", "Y2", "Y3"),
+ TDpredNames = "TD1", TIpredNames = c("TI1", "TI2"))
+
+ #Then convert the absolute times to intervals, using the Tpoints reported from the prior step.
+ wide <- ctIntervalise(datawide = wideexample, Tpoints = 4, n.manifest = 3,
+ n.TDpred = 1, n.TIpred = 2, manifestNames = c("Y1", "Y2", "Y3"),
+ TDpredNames = "TD1", TIpredNames = c("TI1", "TI2") )
 }
 \seealso{
 \code{\link{ctIntervalise}}

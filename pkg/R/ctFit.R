@@ -86,6 +86,14 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' par(mfrow=mfrowOld)
 #' 
 #' 
+#' ### Single subject time series - using Kalman filter (OpenMx statespace expectation)
+#' data('ctExample3')
+#' model <- ctModel(n.latent = 1, n.manifest = 3, Tpoints = 100, 
+#'  LAMBDA = matrix(c(1, 'lambda2', 'lambda3'), nrow = 3, ncol = 1), 
+#'  MANIFESTMEANS = matrix(c(0, 'manifestmean2', 'manifestmean3'), nrow = 3, 
+#'    ncol = 1), T0VAR = diag(1))
+#' fit <- ctFit(data = ctExample3, ctmodelobj = model)
+#' 
 #' ###Oscillating model from Voelkle & Oud (2013). 
 #' data(Oscillating)
 #' oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11, 
@@ -114,8 +122,10 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   
     
   discreteModel=FALSE # removed from function arguments temporarily
-#   require(OpenMx)
-
+  
+  
+  checkOpenMx('ctFit')
+  
   n.latent<-ctmodelobj$n.latent
   n.manifest<-ctmodelobj$n.manifest
   Tpoints<-ctmodelobj$Tpoints
@@ -335,8 +345,8 @@ allow estimation, but better to fix relevant portions manually.'))
     if (n.TDpred > 0){
       TDPREDMEANS <- processInputMatrix(ctmodelobj["TDPREDMEANS"], symmetric = FALSE, diagadd = 0, addCharacters = "FFF")
       TDPREDEFFECT <- processInputMatrix(ctmodelobj["TDPREDEFFECT"], symmetric = FALSE, diagadd = 0, randomscale=0.1, addCharacters = "FFF")
-      T0TDPREDCOV <- processInputMatrix(ctmodelobj["T0TDPREDCOV"], symmetric = FALSE, diagadd = 0, randomscale=.05, addCharacters = "FFF") 
-      TDPREDVAR <- processInputMatrix(ctmodelobj["TDPREDVAR"], symmetric = TRUE, diagadd = 1, randomscale=0.0, addCharacters = "FFF")    
+      T0TDPREDCOV <- processInputMatrix(ctmodelobj["T0TDPREDCOV"], symmetric = FALSE, diagadd = 0, randomscale=.0001, addCharacters = "FFF") 
+      TDPREDVAR <- processInputMatrix(ctmodelobj["TDPREDVAR"], symmetric = TRUE, diagadd = .1, randomscale=0.0001, addCharacters = "FFF")    
     }
     
     if (n.TIpred > 0){ 
@@ -902,7 +912,7 @@ if(objective!='Kalman') { #configure matrices
       
       if(discreteModel==TRUE) fullAlgString <- paste0("DRIFT")
       
-      EXPalgs[i] <- eval(substitute(mxAlgebra(theExpression, name = paste0("discreteDRIFT_T", i)), 
+      EXPalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFT_T", i)), 
         list(theExpression = parse(text = fullAlgString)[[1]])))
     }
     
@@ -918,7 +928,7 @@ if(objective!='Kalman') { #configure matrices
       
       if(discreteModel==TRUE) fullAlgString <- paste0("CINT")
       
-      INTalgs[i] <- eval(substitute(mxAlgebra(theExpression, name = paste0("intd", i)), 
+      INTalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("intd", i)), 
         list(theExpression = parse(text = fullAlgString)[[1]])))
     }
     
@@ -936,7 +946,7 @@ if(objective!='Kalman') { #configure matrices
       
       if(discreteModel==TRUE) fullAlgString <- paste0("rvectorize(DIFFUSION)")
       
-      Qdalgs[i] <- eval(substitute(mxAlgebra(theExpression, name = paste0("Qd", i)), 
+      Qdalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("Qd", i)), 
         list(theExpression = parse(text = fullAlgString)[[1]])))
     }
     
@@ -963,7 +973,7 @@ if(objective!='Kalman') { #configure matrices
       
       if(discreteModel==TRUE) fullAlgString <- paste0("II")
       
-      traitalgs[i] <- eval(substitute(mxAlgebra(theExpression, name = paste0("TRAITd", i)  ), 
+      traitalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("TRAITd", i)  ), 
         list(theExpression = parse(text = fullAlgString)[[1]])))  	
     }
     
@@ -989,7 +999,7 @@ if(objective!='Kalman') { #configure matrices
         #         if(TDpredtype=="level" & asymptotes==TRUE) fullAlgString <- paste0(        #check this after algebra negative corrections
         #           "(II - discreteDRIFT_T", j, ") %*% t(TDPREDEFFECT)")        
         
-        TDPREDEFFECTalgs[j] <- eval(substitute(mxAlgebra(theExpression, name = paste0("TDPREDEFFECT", "_T", j)), 
+        TDPREDEFFECTalgs[j] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("TDPREDEFFECT", "_T", j)), 
           list(theExpression = parse(text = fullAlgString)[[1]]))) 
       }
     }
@@ -1004,7 +1014,7 @@ if(objective!='Kalman') { #configure matrices
         
         fullAlgString <- paste0("(II - discreteDRIFT_T", j, ") %*% TIPREDEFFECT") 
         
-        TIPREDEFFECTalgs[j] <- eval(substitute(mxAlgebra(theExpression, name = paste0("TIPREDEFFECT", "_T", j)), 
+        TIPREDEFFECTalgs[j] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("TIPREDEFFECT", "_T", j)), 
           list(theExpression = parse(text = fullAlgString)[[1]])))  
       }
     }
@@ -1671,7 +1681,7 @@ if(objective!='Kalman') { #configure matrices
     carefulFit<-FALSE
     #     browser()
     mxobj<-try(suppressWarnings(OpenMx::mxRun(model))) #fit with the penalised likelihood
-    #     mxobj<-OpenMx::mxRun(model) #fit with the penalised likelihood
+#         mxobj<-OpenMx::mxRun(model) #fit with the penalised likelihood
     newstarts <- try(omxGetParameters(mxobj)) #get the params
     if(showInits==TRUE) {
       message('Generated inits from carefulFit=TRUE')
@@ -1706,7 +1716,7 @@ if(objective!='Kalman') { #configure matrices
     }
     
     #     if(retryattempts > 0){ 
-    mxobj <- OpenMx::mxTryHard(model, 
+    mxobj <- ctsem::ctmxTryHard(model, 
       fit2beat = fit2beat, showInits=showInits, checkHess=FALSE, greenOK=TRUE, 
       #         intervals = ifelse(!is.null(confidenceintervals), TRUE, FALSE), 
       #         confidenceintervals=confidenceintervals, 

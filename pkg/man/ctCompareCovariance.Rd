@@ -3,10 +3,10 @@
 \name{ctCompareCovariance}
 \alias{ctCompareCovariance}
 \title{ctCompareCovariance
-Compares model implied to observed auto and cross correlations for panel data fit with ctsem. Very rough!}
+Compares model implied to observed auto and cross correlations for panel data fit with ctsem.}
 \usage{
 ctCompareCovariance(ctfitobj, outputmatrices = FALSE, pause = TRUE,
-  ylim = c(-1, 1), varlist = "all", ...)
+  varlist = "all", ...)
 }
 \arguments{
 \item{ctfitobj}{Fitted model object from OpenMx or ctsem.}
@@ -15,14 +15,12 @@ ctCompareCovariance(ctfitobj, outputmatrices = FALSE, pause = TRUE,
 
 \item{pause}{if TRUE (default) output plots interactively, one at a time.  If FALSE, output without stopping.}
 
-\item{ylim}{Limits of y axis, passed to plot function.}
-
 \item{varlist}{if "all" include all variables in dataset.  Otherwise, specify numeric vector of variables to include.}
 
 \item{...}{additional arguments passed to plot.}
 }
 \description{
 ctCompareCovariance
-Compares model implied to observed auto and cross correlations for panel data fit with ctsem. Very rough!
+Compares model implied to observed auto and cross correlations for panel data fit with ctsem.
 }
 

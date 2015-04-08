@@ -8,6 +8,8 @@
 #' @method summary ctsemFit
 #' @export
 summary.ctsemFit<-function(object,...){
+  
+  checkOpenMx('summary.ctsemFit')
 
   outlist<-c()
 #   asymptotes<-object$ctfitargs$asymptotes
@@ -300,7 +302,7 @@ summary.ctsemFit<-function(object,...){
   #end summary from continuous params
   
   ##Openmx params
-browser()
+
   omxsummary<-c(omxsummary['modelName'],omxsummary['wallTime'],omxsummary['mxVersion'],omxsummary['timestamp'],
     omxsummary['parameters'], omxsummary['estimatedParameters'], omxsummary['CI'],
     omxsummary['AIC.Mx'],omxsummary['BIC.Mx'],omxsummary['observedStatistics'],

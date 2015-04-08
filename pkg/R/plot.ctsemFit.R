@@ -28,6 +28,7 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
 
   ctsummary<-summary(ctfitobj)
   
+  checkOpenMx('plot.ctsemFit')
   
   #read in values
   for(i in 1:length(ctsummary)){ #this loop reads in the specified continuous time model so the objects are available

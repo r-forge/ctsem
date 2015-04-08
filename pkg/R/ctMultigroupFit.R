@@ -76,6 +76,7 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
   retryattempts=5,showInits=TRUE,confidenceintervals=NULL,
   plots=FALSE,summaries=FALSE,plotOptimization=FALSE,...){
 
+  checkOpenMx('ctFit')
   
   if(any(suppressWarnings(!is.na(as.numeric(groupings))))) stop("grouping variable must not contain purely numeric items")
   if(length(groupings)!= nrow(datawide)) stop('length of groupings does not equal number of rows of datawide')
@@ -282,7 +283,7 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
       fullmodel<- OpenMx::mxOption(fullmodel,'Checkpoint Count', 1)    
     }
     
-    multiout<-OpenMx::mxTryHard(fullmodel,
+    multiout<-ctsem::ctmxTryHard(fullmodel,
       showInits=showInits,
       #         intervals = ifelse(!is.null(confidenceintervals),TRUE,FALSE),
 #       confidenceintervals=confidenceintervals,

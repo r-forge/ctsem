@@ -40,8 +40,7 @@ Description: ctsem is an R package for continuous time structural equation
     observations are regularly spaced.
 License: GPL-3
 Depends: R (>= 3.0.0)
-URL:
-LinkingTo: RcppEigen
+URL: http://ctsem.r-forge.r-project.org/
 Imports:  MASS
 Additional_repositories: http://openmx.psyc.virginia.edu/OpenMx2/
 LazyData: Yes

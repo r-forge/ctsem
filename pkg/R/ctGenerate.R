@@ -1,7 +1,10 @@
 #' Simulate continuous time data
 #' 
 #' This function generates data according to the specified ctsem model object, 
-#' which must contain fixed values for parameters.
+#' which must contain fixed values for parameters. Not all T0 matrices are included at present,
+#' safest to use a high burnin (where 'high' is sufficient for the process to forget starting values'
+#' 
+#' 
 #' @param ctmodelobj ctsem model object from \code{\link{ctModel}}.
 #' @param n.subjects Number of subjects to output.
 #' @param burnin Number of initial time points to discard (to simulate stationary data)
@@ -11,6 +14,8 @@
 #' @export
 
 ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT=1,asymptotes=FALSE){
+  
+  checkOpenMx('ctGenerate')
   
   ###read in model
   for(i in 1:length(ctmodelobj)){ #this loop reads in the specified continuous time model
