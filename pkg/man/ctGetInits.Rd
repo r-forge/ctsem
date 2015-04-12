@@ -4,7 +4,7 @@
 \alias{ctGetInits}
 \title{ctGetInits}
 \usage{
-ctGetInits(ctfitobject)
+ctGetInits(ctfitobject, ...)
 }
 \arguments{
 \item{ctfitobject}{ctsem fit object to extract new starting values from}

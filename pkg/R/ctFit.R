@@ -23,9 +23,11 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' @param TDpredtype if "impulse" (default) TDpredictors input a single shock.  
 #' If "level" they alter the base level of process, in some sense a variable CINT.
 #' @param objective 'auto' selects either 'Kalman', if fitting to single subject data, 
-#' or 'mxRAM' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} 
+#' or 'mxFIML' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} 
 #' function from OpenMx to implement the Kalman filter. 
-#' For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject. 
+#' For more than one subject, 'mxFIML' specifies a wide format SEM with a row of data per subject.
+#' 'mxRAM' is also an option, equivalent to 'mxFIML', but slower, using the standard RAM 
+#' matrix operations. 
 #' See \code{\link{ctMultigroupFit}} for the possibility to apply the Kalman filter over multiple subjects)
 #' @param stationary Character vector of T0 matrix names to constrain to stationarity.  
 #' Defaults to c('T0TRAITEFFECT', 'T0TIPREDEFFECT'), constraining only the between subject difference effects. 
@@ -47,11 +49,15 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' to force MANIFESTVAR, DRIFT, TRAITVAR, MANIFESTTRAITVAR parameters to remain close to 0, then
 #' fits the specified model normally, using these estimates as starting values. 
 #' Can help with optimization when extreme parameter estimates are returned, 
-#' though results in user specified inits being ignored for the final fit.
+#' though results in user specified start values being ignored for the final fit.
 #' @param plotOptimization If TRUE, uses checkpointing for \code{\link{mxRun}}, set to checkpoint every iteration, 
 #' output checkpoint file to working directory, then creates a plot for each parameter's values over iterations.
 #' @param meanintervals Use average time intervals for each column for calculation 
 #' (both faster and inaccurate to the extent that intervals vary across individuals).
+#' @param discreteTimeModel Estimate a discrete time model - ignores timing information, parameter
+#' estimates will correspond to those of classical vector autoregression models, 
+#' OpenMx fit object will be directly output, thus ctsem summary and plot functionality will be unavailable.
+#' Time dependent predictor type also becomes irrelevant.
 #'
 #'  @details
 #'  DATA STRUCTURE:
@@ -96,14 +102,15 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' 
 #' ###Oscillating model from Voelkle & Oud (2013). 
 #' data(Oscillating)
+#' inits <- setNames(c(-38,-.5,1,1,38,.9),c('cross','auto',
+#' 'diffusion22','T0var11','T0var22','m2')
 #' oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11, 
 #'   MANIFESTVAR=matrix(c(0), nrow=1, ncol=1), 
 #'   LAMBDA=matrix(c(1, 0), nrow=1, ncol=2), 
 #'   DRIFT=matrix(c(0, "cross", 1, "auto"), nrow=2, ncol=2), 
 #'   CINT=matrix(0, ncol=1, nrow=2, ), 
 #'   DIFFUSION=matrix(c(0, 0, 0, "diffusion22"), nrow=2, ncol=2), 
-#'   inits=matrix(c("cross", -38, "auto", -.5, "diffusion22", 1, 
-#'     "T0var11", 1, "T0var22", 38, "m2", .9), byrow=TRUE, ncol=2))
+#'   startValues = inits)
 #' oscillatingf<-ctFit(Oscillating, oscillatingm)
 #' summary(oscillatingf)
 #' plot(oscillatingf, wait=FALSE)
@@ -118,10 +125,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   retryattempts=12, iterationSummary=TRUE, fit2beat=Inf, carefulFit=TRUE,  
   showInits=FALSE, 
   meanintervals=FALSE, plotOptimization=F, 
-  nofit = FALSE){
-  
-    
-  discreteModel=FALSE # removed from function arguments temporarily
+  nofit = FALSE, discreteTimeModel=FALSE){
   
   
   checkOpenMx('ctFit')
@@ -131,7 +135,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   Tpoints<-ctmodelobj$Tpoints
   n.TDpred<-ctmodelobj$n.TDpred
   n.TIpred<-ctmodelobj$n.TIpred
-  inits<-ctmodelobj$inits
+  startValues<-ctmodelobj$startValues
   
   manifestNames<-ctmodelobj$manifestNames
   latentNames<-ctmodelobj$latentNames
@@ -140,9 +144,8 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   
   #determine objective based on number of rows
   if(objective=='auto' & nrow(datawide) == 1) objective<-'Kalman'
-  if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred ==0 ) objective<-'mxRAM'
-  if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred >0 ) objective<-'mxRAM'
-  if(objective=='mxFIML' & n.TIpred + n.TDpred > 0) warning('mxFIML objective not functioning correctly for predictors!')
+  if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred ==0 ) objective<-'mxFIML'
+  if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred >0 ) objective<-'mxFIML'
   
   #capture arguments
   ctfitargs<- list(confidenceintervals, TDpredtype, stationary, reasonable, optimizer, 
@@ -153,10 +156,16 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   #ensure data is a matrix
   datawide<-as.matrix(datawide)
   
-  ####check data contains correct number of columns
+  ####check data contains correct number of columns (ignore if discreteTimeModel specified)
   neededColumns<-Tpoints * n.manifest+(Tpoints - 1)+n.TDpred * (Tpoints - 1)+n.TIpred
-  if(ncol(datawide)!=neededColumns) stop("Number of columns in data (", paste0(ncol(datawide)), ") do not match model (", paste0(neededColumns), ")")
+  if(ncol(datawide)!=neededColumns & discreteTimeModel != TRUE) stop("Number of columns in data (", paste0(ncol(datawide)), ") do not match model (", paste0(neededColumns), ")")
   
+  if(discreteTimeModel == TRUE){
+    message('discreteTimeModel==TRUE set -- any T0 stationarity constraints will be removed, carefulFit disabled,
+timing information ignored. Parameter estimates will *not* correspond with those from continous time models.')
+    carefulFit<-FALSE
+    stationary<-NULL    
+  }
   
   
   ####0 variance predictor fix
@@ -236,19 +245,6 @@ allow estimation, but better to fix relevant portions manually.'))
   }
   
   
-  
-#   #function to assign variables in current environment into parent frames (used because we split up function into chunks)
-#   returnAllLocals <- function(stepsBack = 1){
-#     variableList <- list(ls(sys.frame( - 1)))
-# 
-#     for(i in variableList[[1]]){
-#       assign(i, get(i, envir = sys.frame( - 1)), pos = sys.frame( - 1 - stepsBack))
-#     }
-#   } 
-#   
-  
-  
-  
   #function to remove FFF's from value matrices and coerce to numeric (FFF originally added to label to specify fixed value)
   removeF <- function(matrices){
     
@@ -272,8 +268,8 @@ allow estimation, but better to fix relevant portions manually.'))
     
     #function to process ctModel specification:  seperate labels and values, fixed and free, and generate start values
     processInputMatrix <- function(x, symmetric = FALSE, diagadd = 0, randomscale=0.01, addvalues=FALSE, addCharacters = NULL, ...){
-#       browser()
     name<-names(x)
+ 
       inputm<-x[[1]]
       inputmFixed <- suppressWarnings(matrix(as.numeric(inputm), nrow = nrow(inputm), ncol = ncol(inputm))) #calc fixed only matrix  
       
@@ -283,8 +279,6 @@ allow estimation, but better to fix relevant portions manually.'))
       labels <- ctLabel(TDpredNames=TDpredNames, TIpredNames=TIpredNames, manifestNames=manifestNames, latentNames=latentNames, matrixname=name, n.latent=n.latent, 
         n.manifest=n.manifest, n.TDpred=n.TDpred, n.TIpred=n.TIpred, Tpoints=Tpoints)
       if(any(!is.na(inputmCharacter)))  labels[!is.na(inputmCharacter)] <- inputmCharacter[!is.na(inputmCharacter)]
-#       assign(paste0(x, 'labels'), labels, pos = parent.frame(1))
-      
       
       #starting values matrix
       values <- matrix(round(rnorm(length(inputmFixed), 0, randomscale), 3), nrow = nrow(inputm), ncol = ncol(inputm)) #generate start values according to randomscale
@@ -293,22 +287,16 @@ allow estimation, but better to fix relevant portions manually.'))
       if(symmetric == TRUE)  {values[row(values) > col(values)] <- t(values)[col(values) < row(values)]} #set symmetric if necessary
       values[!is.na(inputmFixed)] <- inputmFixed[!is.na(inputmFixed)] #overwite with any fixed values
       
-      if(!is.null(inits)){ #if there are some inits specified, check each part of x
-#         message(paste0("Processing start values for ", x))
-        for(i in 1:length(inputmCharacter)){ #for every cell in x
-          if(!is.na(inputmCharacter[i])){ #if it is not NA
-            if(any(inputmCharacter[i] == inits[, 1])){  #and any cells match column 1 of labelinits               
-              values[i] <- as.numeric(inits[which(inputmCharacter[i] == inits[, 1], arr.ind = TRUE)[1], 2]) #for labels with init specified, insert init into value matrix
-            }}}}
-      
-#       assign(paste0(x, 'inits'), values, pos = parent.frame(1)) 
+      if(!is.null(startValues)){ #if there are some startValues specified, check each part of x
+        for( i in 1:length(startValues)){
+          values[grepl(names(startValues)[i], inputmCharacter)] <- startValues[i]
+        }
+      }
+
       inits<-values #output inits matrix without fixed specification (for calculation, eg discrete drift inits)
       
       values[!is.na(inputmFixed)] <- paste0(addCharacters, inputm[!is.na(inputmFixed)]) #append addcharacters to fixed values    
-#       assign(paste0(x, 'values'), values, pos = parent.frame(1)) #output values matrix
-      
-      
-      
+    
       #free matrix
       free <- suppressWarnings(!is.na(matrix(as.numeric(values), nrow = nrow(values))))
       
@@ -339,24 +327,24 @@ allow estimation, but better to fix relevant portions manually.'))
     
     
     if(traitExtension == TRUE && !is.null(ctmodelobj$TRAITTDPREDCOV)) {
-      TRAITTDPREDCOV <- processInputMatrix(ctmodelobj["TRAITTDPREDCOV"], symmetric = FALSE, randomscale=.1, diagadd = 0, addCharacters = "FFF")
+      TRAITTDPREDCOV <- processInputMatrix(ctmodelobj["TRAITTDPREDCOV"], symmetric = FALSE, randomscale=0.01, diagadd = 0, addCharacters = "FFF")
     }
     
     if (n.TDpred > 0){
       TDPREDMEANS <- processInputMatrix(ctmodelobj["TDPREDMEANS"], symmetric = FALSE, diagadd = 0, addCharacters = "FFF")
       TDPREDEFFECT <- processInputMatrix(ctmodelobj["TDPREDEFFECT"], symmetric = FALSE, diagadd = 0, randomscale=0.1, addCharacters = "FFF")
-      T0TDPREDCOV <- processInputMatrix(ctmodelobj["T0TDPREDCOV"], symmetric = FALSE, diagadd = 0, randomscale=.0001, addCharacters = "FFF") 
-      TDPREDVAR <- processInputMatrix(ctmodelobj["TDPREDVAR"], symmetric = TRUE, diagadd = .1, randomscale=0.0001, addCharacters = "FFF")    
+      T0TDPREDCOV <- processInputMatrix(ctmodelobj["T0TDPREDCOV"], symmetric = FALSE, diagadd = 0, randomscale=0.01, addCharacters = "FFF") 
+      TDPREDVAR <- processInputMatrix(ctmodelobj["TDPREDVAR"], symmetric = TRUE, diagadd = 1, randomscale=0.01, addCharacters = "FFF")    
     }
     
     if (n.TIpred > 0){ 
       TIPREDMEANS <- processInputMatrix(ctmodelobj["TIPREDMEANS"], symmetric = FALSE, diagadd = 0, addCharacters = "FFF")
       TIPREDEFFECT <- processInputMatrix(ctmodelobj["TIPREDEFFECT"], symmetric = FALSE, diagadd = 0, randomscale=1, addCharacters = "FFF")
       T0TIPREDEFFECT <- processInputMatrix(ctmodelobj["T0TIPREDEFFECT"], symmetric = FALSE, diagadd = 0, randomscale=1, addCharacters = "FFF")
-      TIPREDVAR <- processInputMatrix(ctmodelobj["TIPREDVAR"], symmetric = TRUE, diagadd = 1, randomscale=0.0, addCharacters = "FFF")    
+      TIPREDVAR <- processInputMatrix(ctmodelobj["TIPREDVAR"], symmetric = TRUE, diagadd = 1, randomscale=0.01, addCharacters = "FFF")    
     }
     
-    if(n.TIpred > 0 & n.TDpred > 0) TDTIPREDCOV <- processInputMatrix(ctmodelobj["TDTIPREDCOV"], symmetric = FALSE, randomscale=.1, addCharacters = "FFF")    
+    if(n.TIpred > 0 & n.TDpred > 0) TDTIPREDCOV <- processInputMatrix(ctmodelobj["TDTIPREDCOV"], symmetric = FALSE, randomscale=0.01, addCharacters = "FFF")    
     
 #     
 #     returnAllLocals()
@@ -375,6 +363,8 @@ if(objective!='Kalman') { #configure matrices
     latentstart <- 1
     latentend <- n.latent * Tpoints
     latentExtent<-latentend #includes *all* latents - traits and manifest traits
+  traitend <- latentend #because no traits yet
+  latenttraitend <- traitend
     manifeststart <- n.latent * Tpoints+1
     manifestend <- latentend+n.manifest * Tpoints
     manifestExtent <-manifestend # includes *all* manifests - predictors also
@@ -386,7 +376,7 @@ if(objective!='Kalman') { #configure matrices
     #create A and S matrices   
     A<-list()
     S<-list()
-    A$values <- matrix("FFF0", nrow = manifestend, ncol = manifestend)
+    A$values <- matrix('FFF0', nrow = manifestend, ncol = manifestend)
     A$labels <- matrix(, nrow = manifestend, ncol = manifestend)
     S$values <- matrix("FFF0", nrow = manifestend, ncol = manifestend)
     S$labels <- matrix(NA, nrow = manifestend, ncol = manifestend)
@@ -792,17 +782,6 @@ if(objective!='Kalman') { #configure matrices
     S$values <- insertTIpredsToMatrix(S$values, "FFF0")
     S$labels <- insertTIpredsToMatrix(S$labels, NA)    
     
-    #fast predictor estimates if fastPredictors is set
-    #     if(fastPredictors==TRUE){
-    #         temp<-matrix(paste0('FFF', cov(datawide[, TIpredNames], use='pairwise.complete.obs')), nrow=nrow(TIPREDVAR$values))
-    # 
-    #       if(all(!is.na(temp))){
-    #       TIPREDVAR$values<-temp
-    #       TIPREDVAR$free<-FALSE  
-    #       }
-    #       if(any(is.na(temp))) message('Too much missingness in TI predictors to use calculated covariance for TIPREDVAR, so estimating...')
-    #     }
-    
     #Effect of TIpreds on processes
     A$values[(n.latent+1):latentend, predictorTIstart:predictorTIend] <- paste0("FFF", .1) #add rough starting values, fixed for algebras
     
@@ -908,9 +887,9 @@ if(objective!='Kalman') { #configure matrices
     
     EXPalgs <- list()
     for(i in 1:(Tpoints - 1)){
-      if(discreteModel==FALSE) fullAlgString <- paste0("omxExponential(DRIFT %x%", defcall[i], ")")
+      if(discreteTimeModel==FALSE) fullAlgString <- paste0("omxExponential(DRIFT %x%", defcall[i], ")")
       
-      if(discreteModel==TRUE) fullAlgString <- paste0("DRIFT")
+      if(discreteTimeModel==TRUE) fullAlgString <- paste0("DRIFT")
       
       EXPalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFT_T", i)), 
         list(theExpression = parse(text = fullAlgString)[[1]])))
@@ -919,14 +898,14 @@ if(objective!='Kalman') { #configure matrices
     INTalgs <- list()
     for(i in 1:(Tpoints - 1)){
       
-      if(discreteModel==FALSE){
+      if(discreteTimeModel==FALSE){
         #         if(asymptotes==FALSE) 
         fullAlgString <- paste0('invDRIFT %*%   (discreteDRIFT_T', i, ' - II) %*% CINT') #optimize based on continuous CINT
         
         #         if(asymptotes==TRUE) fullAlgString <- paste0("(II - discreteDRIFT_T", i, ") %*% CINT") #discrete cint based on asymptotic CINT
       }
       
-      if(discreteModel==TRUE) fullAlgString <- paste0("CINT")
+      if(discreteTimeModel==TRUE) fullAlgString <- paste0("CINT")
       
       INTalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("intd", i)), 
         list(theExpression = parse(text = fullAlgString)[[1]])))
@@ -935,7 +914,7 @@ if(objective!='Kalman') { #configure matrices
     Qdalgs <- list()
     for(i in 1:(Tpoints - 1)){
       
-      if(discreteModel==FALSE){
+      if(discreteTimeModel==FALSE){
         #         if(asymptotes==FALSE) 
         fullAlgString <- paste0("solve(DRIFTHATCH) %*% 
           ((omxExponential(DRIFTHATCH %x% ", defcall[i], ")) - (II%x%II) )%*% rvectorize(DIFFUSION)") #optimize over continuous diffusion variance
@@ -944,7 +923,7 @@ if(objective!='Kalman') { #configure matrices
         #           (discreteDRIFT_T", i, ") %x% (discreteDRIFT_T", i, ") )  %*%  cvectorize(DIFFUSION) ") #from asymptotic diffusion variance
       }   
       
-      if(discreteModel==TRUE) fullAlgString <- paste0("rvectorize(DIFFUSION)")
+      if(discreteTimeModel==TRUE) fullAlgString <- paste0("rvectorize(DIFFUSION)")
       
       Qdalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("Qd", i)), 
         list(theExpression = parse(text = fullAlgString)[[1]])))
@@ -964,14 +943,14 @@ if(objective!='Kalman') { #configure matrices
     traitalgs <- list()
     for(i in 1:(Tpoints - 1)){
       
-      if(discreteModel==FALSE){
+      if(discreteTimeModel==FALSE){
         #         if(asymptotes==FALSE) 
         fullAlgString <- paste0("invDRIFT %*%   (omxExponential(DRIFT %x%", defcall[i], ") - II)")   #optimize using continuous traitvar        
         #         if(asymptotes==TRUE) 
         #         fullAlgString <- paste0("II - discreteDRIFT_T", i) #using asymptotic trait variance 
       }
       
-      if(discreteModel==TRUE) fullAlgString <- paste0("II")
+      if(discreteTimeModel==TRUE) fullAlgString <- paste0("II")
       
       traitalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("TRAITd", i)  ), 
         list(theExpression = parse(text = fullAlgString)[[1]])))  	
@@ -990,11 +969,16 @@ if(objective!='Kalman') { #configure matrices
       
       for(j in 1:(Tpoints - 1)){
         
-        if(TDpredtype=="impulse") fullAlgString <- paste0(
-          "discreteDRIFT_T", j, " %*% TDPREDEFFECT")
+        if(TDpredtype=="impulse"){
+          if(discreteTimeModel==FALSE) fullAlgString <- paste0("discreteDRIFT_T", j, " %*% TDPREDEFFECT")
+          if(discreteTimeModel==TRUE) fullAlgString <- paste0("TDPREDEFFECT")
+        }
         
-        if(TDpredtype=="level") fullAlgString <- paste0(
-          "invDRIFT%*% (discreteDRIFT_T", j, " - II)%*%TDPREDEFFECT")
+        if(TDpredtype=="level") {
+          if(discreteTimeModel==FALSE) fullAlgString <- paste0("invDRIFT%*% (discreteDRIFT_T", j, " - II)%*%TDPREDEFFECT")
+          if(discreteTimeModel==TRUE) fullAlgString <- paste0("TDPREDEFFECT")
+        }
+          
         
         #         if(TDpredtype=="level" & asymptotes==TRUE) fullAlgString <- paste0(        #check this after algebra negative corrections
         #           "(II - discreteDRIFT_T", j, ") %*% t(TDPREDEFFECT)")        
@@ -1012,7 +996,8 @@ if(objective!='Kalman') { #configure matrices
         #         if(asymptotes==FALSE) fullAlgString <- paste0("invDRIFT %*% (omxExponential(DRIFT %x% ", defcall[i], ") - II) %*% TIPREDEFFECT")
         #         if(asymptotes==TRUE) 
         
-        fullAlgString <- paste0("(II - discreteDRIFT_T", j, ") %*% TIPREDEFFECT") 
+        if(discreteTimeModel==FALSE) fullAlgString <- paste0("(II - discreteDRIFT_T", j, ") %*% TIPREDEFFECT") 
+        if(discreteTimeModel==TRUE) fullAlgString <- paste0("TIPREDEFFECT") 
         
         TIPREDEFFECTalgs[j] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("TIPREDEFFECT", "_T", j)), 
           list(theExpression = parse(text = fullAlgString)[[1]])))  
@@ -1362,41 +1347,78 @@ if(objective!='Kalman') { #configure matrices
     if(objective == "mxFIML") { #split RAM style matrices into components for faster processing
       
       manifestExtent<-manifestend #update manifest extents - perhaps requires predictors
+      latentExtent<-latentend
       if(n.TDpred + n.TIpred > 0) manifestExtent <- manifestExtent + n.TDpred *(Tpoints-1) + n.TIpred
+      if(n.TDpred + n.TIpred > 0) latentExtent <- latentExtent + n.TDpred *(Tpoints-1) + n.TIpred
+      if(traitExtension==TRUE) latentExtent<-latentExtent+n.latent
+      if(manifestTraitvarExtension==TRUE) latentExtent <- latentExtent + n.manifest
       
+      latents<-1:(n.latent*Tpoints)
+      if(traitExtension==TRUE) latents<-c(latents,(n.latent*Tpoints+1):(n.latent*Tpoints+n.latent))
+      if(manifestTraitvarExtension==TRUE) latents<-c(latents,(manifesttraitstart):(traitend))
+      if(n.TDpred > 0) latents<-c(latents,predictorTDstart:predictorTDend)
+      if(n.TIpred >0) latents <- c(latents,predictorTIstart:predictorTIend)
+    
+      Amanifestvalues <- A$values[manifeststart:manifestExtent, latents]
+      Smanifestvalues<-S$values[manifeststart:manifestExtent, manifeststart:manifestExtent]
+      Smanifestlabels<-S$labels[manifeststart:manifestExtent, manifeststart:manifestExtent]
+      Smanifestfree<-S$free[manifeststart:manifestExtent, manifeststart:manifestExtent]
+      
+      Amanifestcovvalues <- A$values[manifeststart:manifestExtent, latents] #need this to incorporate predictor and manifest covariance
+      if(n.TDpred+n.TIpred > 0) {
+        Amanifestcovvalues[(n.manifest*Tpoints+1):(n.manifest*Tpoints+n.TIpred+n.TDpred*(Tpoints-1)),
+        (traitend+1):(traitend+n.TIpred+n.TDpred*(Tpoints-1))] [col(diag(n.TIpred+n.TDpred*(Tpoints-1))) == 
+            row(diag(n.TIpred+n.TDpred*(Tpoints-1)))] <- 1
+        
+        Smanifestvalues[(n.manifest*Tpoints+1):(n.manifest*Tpoints+n.TIpred+n.TDpred*(Tpoints-1)),
+          (n.manifest*Tpoints+1):(n.manifest*Tpoints+n.TIpred+n.TDpred*(Tpoints-1))]  <-0
+        Smanifestlabels[(n.manifest*Tpoints+1):(n.manifest*Tpoints+n.TIpred+n.TDpred*(Tpoints-1)),
+          (n.manifest*Tpoints+1):(n.manifest*Tpoints+n.TIpred+n.TDpred*(Tpoints-1))]  <-NA
+        Smanifestfree[(n.manifest*Tpoints+1):(n.manifest*Tpoints+n.TIpred+n.TDpred*(Tpoints-1)),
+          (n.manifest*Tpoints+1):(n.manifest*Tpoints+n.TIpred+n.TDpred*(Tpoints-1))]  <-F
+      }
+  
       #base model components
       model <- OpenMx::mxModel(model, 
         
-        mxMatrix(name='Alatent', values=A$values[1:latentend, 1:latentend], 
-          labels=A$labels[1:latentend, 1:latentend], 
-          free=A$free[1:latentend, 1:latentend], 
-          nrow=latentend, ncol=latentend), 
+        mxMatrix(name='Alatent', values=A$values[latents, latents], 
+          labels=A$labels[latents, latents], 
+          free=A$free[latents, latents], 
+          nrow=latentExtent, ncol=latentExtent), 
         
-        mxMatrix(name='Slatent', values=S$values[1:latentend, 1:latentend], 
-          labels=S$labels[1:latentend, 1:latentend], 
-          free=S$free[1:latentend, 1:latentend], 
-          nrow=latentend, ncol=latentend), 
+        mxMatrix(name='Slatent', values=S$values[latents, latents], 
+          labels=S$labels[latents, latents], 
+          free=S$free[latents, latents], 
+          nrow=latentExtent, ncol=latentExtent), 
         
-        mxMatrix(name='Mlatent', values=M$values[1:latentend, 1], 
-          labels=M$labels[1:latentend, 1], 
-          free=M$free[1:latentend, 1], 
-          nrow=1, ncol=latentend), 
+        mxMatrix(name='Mlatent', values=M$values[latents, 1], 
+          labels=M$labels[latents, 1], 
+          free=M$free[latents, 1], 
+          nrow=1, ncol=latentExtent), 
         
-        mxMatrix(name='Smanifest', labels=S$labels[manifeststart:manifestExtent, manifeststart:manifestExtent], #includes predictors!!
-          values=S$values[manifeststart:manifestExtent, manifeststart:manifestExtent], 
-          free=S$free[manifeststart:manifestExtent, manifeststart:manifestExtent], 
+        mxMatrix(name='Smanifest', labels=Smanifestlabels, #includes predictors!!
+          values=Smanifestvalues, 
+          free=Smanifestfree, 
           nrow=n.manifest*Tpoints+n.TDpred*(Tpoints-1)+n.TIpred, ncol=n.manifest*Tpoints+n.TDpred*(Tpoints-1)+n.TIpred), 
+#           nrow=n.manifest*Tpoints, ncol=n.manifest*Tpoints), 
         
         mxMatrix(name='Mmanifest', labels=M$labels[manifeststart:manifestExtent], 
           values=M$values[manifeststart:manifestExtent], free=M$free[manifeststart:manifestExtent], 
           nrow=1, ncol=n.manifest*Tpoints+n.TDpred*(Tpoints-1)+n.TIpred), 
+#           nrow=1, ncol=n.manifest*Tpoints), 
         
-        mxMatrix(name='Amanifest', values=A$values[manifeststart:manifestExtent, 1:latentend], 
-          labels=A$labels[manifeststart:manifestExtent, 1:latentend], 
-          free=A$free[manifeststart:manifestExtent, 1:latentend], 
-          nrow=n.manifest*Tpoints+n.TDpred*(Tpoints-1)+n.TIpred, ncol=latentend), 
+        mxMatrix(name='Amanifest', values=Amanifestvalues, 
+          labels=A$labels[manifeststart:manifestExtent, latents], 
+          free=A$free[manifeststart:manifestExtent, latents], 
+          nrow=n.manifest*Tpoints+n.TDpred*(Tpoints-1)+n.TIpred, ncol=latentExtent), 
+#           nrow=n.manifest*Tpoints, ncol=latentExtent), 
         
-        mxMatrix(name='Ilatent', type='Iden', nrow=latentend, ncol=latentend), 
+        mxMatrix(name='Amanifestcov', values=Amanifestcovvalues, 
+          labels=A$labels[manifeststart:manifestExtent, latents], 
+          free=A$free[manifeststart:manifestExtent, latents], 
+          nrow=n.manifest*Tpoints+n.TDpred*(Tpoints-1)+n.TIpred, ncol=latentExtent), 
+        
+        mxMatrix(name='Ilatent', type='Iden', nrow=latentExtent, ncol=latentExtent), 
         
         mxAlgebra(name='invIminusAlatent', solve(Ilatent - Alatent))
       )
@@ -1405,69 +1427,80 @@ if(objective!='Kalman') { #configure matrices
       fullSmanifestlist<-'Smanifest'
       fullMlatentlist<-'Mlatent'
       
-     if(traitExtension==TRUE){
-       fullSlatentlist<-c(fullSlatentlist, 'traitCov')
-       model <- OpenMx::mxModel(model, 
-         
-         mxMatrix(name='Atrait', values=A$values[1:latentend, traitstart:latenttraitend], 
-           labels=A$labels[1:latentend, traitstart:latenttraitend], 
-           free=A$free[1:latentend, traitstart:latenttraitend], 
-           nrow=latentend, ncol=n.latent), 
-         
-         mxMatrix(name='Strait', values=S$values[traitstart:latenttraitend, traitstart:latenttraitend], 
-           labels=S$labels[traitstart:latenttraitend, traitstart:latenttraitend], 
-           free=S$free[traitstart:latenttraitend, traitstart:latenttraitend], 
-           nrow=n.latent, ncol=n.latent),       
+#      if(traitExtension==TRUE){
+#        fullSlatentlist<-c(fullSlatentlist, 'traitCov')
+#        model <- OpenMx::mxModel(model, 
+#          
+#          mxMatrix(name='Atrait', values=A$values[1:latentend, traitstart:latenttraitend], 
+#            labels=A$labels[1:latentend, traitstart:latenttraitend], 
+#            free=A$free[1:latentend, traitstart:latenttraitend], 
+#            nrow=latentend, ncol=n.latent), 
+#          
+#          mxMatrix(name='Strait', values=S$values[traitstart:latenttraitend, traitstart:latenttraitend], 
+#            labels=S$labels[traitstart:latenttraitend, traitstart:latenttraitend], 
+#            free=S$free[traitstart:latenttraitend, traitstart:latenttraitend], 
+#            nrow=n.latent, ncol=n.latent),       
+#       
+#          mxAlgebra(name='traitCov', Atrait %*%  Strait %*%  t(Atrait))  #latent trait covariance            
+#        )
+#      }
       
-         mxAlgebra(name='traitCov', Atrait %*%  Strait %*%  t(Atrait))  #latent trait covariance            
-       )
-     }
-      
-      if(manifestTraitvarExtension==TRUE){
-        fullSmanifestlist<-c(fullSmanifestlist, 'manifesttraitCov')
-        model <- OpenMx::mxModel(model, 
-          
-          mxMatrix(name='Amanifesttrait', values=A$values[manifeststart:manifestExtent, manifesttraitstart:traitend], 
-            labels=A$labels[manifeststart:manifestExtent, manifesttraitstart:traitend], 
-            free=A$free[manifeststart:manifestExtent, manifesttraitstart:traitend], 
-            nrow=Tpoints*n.manifest+n.TDpred*(Tpoints-1)+n.TIpred, ncol=n.manifest), 
-          
-          mxMatrix(name='Smanifesttrait', values=S$values[manifesttraitstart:traitend, manifesttraitstart:traitend], 
-            labels=S$labels[manifesttraitstart:traitend, manifesttraitstart:traitend], 
-            free=S$free[manifesttraitstart:traitend, manifesttraitstart:traitend], 
-            nrow=n.manifest, ncol=n.manifest),       
-          
-          mxAlgebra(name='manifesttraitCov', Amanifesttrait %*%  Smanifesttrait %*%  t(Amanifesttrait))  #updated S manifest covariance with manifest traits
-        )
-      }
+#       if(manifestTraitvarExtension==TRUE){
+#         fullSmanifestlist<-c(fullSmanifestlist, 'manifesttraitCov')
+#         model <- OpenMx::mxModel(model, 
+#           
+#           mxMatrix(name='Amanifesttrait', values=A$values[manifeststart:manifestExtent, manifesttraitstart:traitend], 
+#             labels=A$labels[manifeststart:manifestExtent, manifesttraitstart:traitend], 
+#             free=A$free[manifeststart:manifestExtent, manifesttraitstart:traitend], 
+#             nrow=Tpoints*n.manifest+n.TDpred*(Tpoints-1)+n.TIpred, ncol=n.manifest), 
+#           
+#           mxMatrix(name='Smanifesttrait', values=S$values[manifesttraitstart:traitend, manifesttraitstart:traitend], 
+#             labels=S$labels[manifesttraitstart:traitend, manifesttraitstart:traitend], 
+#             free=S$free[manifesttraitstart:traitend, manifesttraitstart:traitend], 
+#             nrow=n.manifest, ncol=n.manifest),       
+#           
+#           mxAlgebra(name='manifesttraitCov', Amanifesttrait %*%  Smanifesttrait %*%  t(Amanifesttrait))  #updated S manifest covariance with manifest traits
+#         )
+#       }
       
       
-      if(n.TDpred + n.TIpred > 0){
-        fullSlatentlist<-c(fullSlatentlist, 'predCov')
-        fullMlatentlist<-c(fullMlatentlist, 'predMean')
-#         browser()
-        model <- OpenMx::mxModel(model, 
-          
-          mxMatrix(name='Apred', values=A$values[1:latentend, predictorstart:predictorend], 
-            labels=A$labels[1:latentend, predictorstart:predictorend], 
-            free=A$free[1:latentend, predictorstart:predictorend], 
-            nrow=latentend, ncol=n.TDpred*(Tpoints-1)+n.TIpred), 
-          
-          mxMatrix(name='Spred', values=S$values[predictorstart:predictorend, predictorstart:predictorend], 
-            labels=S$labels[predictorstart:predictorend, predictorstart:predictorend], 
-            free=S$free[predictorstart:predictorend, predictorstart:predictorend], 
-            nrow=n.TDpred*(Tpoints-1)+n.TIpred, ncol=n.TDpred*(Tpoints-1)+n.TIpred),       
-          
-          mxMatrix(name='Mpred', values=M$values[predictorstart:predictorend], 
-            labels=M$labels[predictorstart:predictorend], 
-            free=M$free[predictorstart:predictorend], 
-            nrow=1, ncol=n.TDpred*(Tpoints-1) + n.TIpred), 
-          
-          mxAlgebra(name='predMean', Mpred %*% t(Apred)), 
-          mxAlgebra(name='predCov', Apred %*%  Spred %*%  t(Apred))  #predictor covariance 
-
-        )
-      }
+#       if(n.TDpred + n.TIpred > 0){
+# #         fullSlatentlist<-c(fullSlatentlist, 'predCov')
+# #         fullMlatentlist<-c(fullMlatentlist, 'predMean')
+# #         browser()
+#         model <- OpenMx::mxModel(model, 
+#           
+#           mxMatrix(name='Apred', values=A$values[1:latentend, predictorstart:predictorend], 
+#             labels=A$labels[1:latentend, predictorstart:predictorend], 
+#             free=A$free[1:latentend, predictorstart:predictorend], 
+#             nrow=latentend, ncol=n.TDpred*(Tpoints-1)+n.TIpred), 
+#           
+#           mxMatrix(name='Spred', values=S$values[predictorstart:predictorend, predictorstart:predictorend], 
+#             labels=S$labels[predictorstart:predictorend, predictorstart:predictorend], 
+#             free=S$free[predictorstart:predictorend, predictorstart:predictorend], 
+#             nrow=n.TDpred*(Tpoints-1)+n.TIpred, ncol=n.TDpred*(Tpoints-1)+n.TIpred),       
+#           
+# #           mxMatrix(name='Mpred', values=M$values[predictorstart:predictorend], 
+# #             labels=M$labels[predictorstart:predictorend], 
+# #             free=M$free[predictorstart:predictorend], 
+# #             nrow=1, ncol=n.TDpred*(Tpoints-1) + n.TIpred) 
+#           
+#           mxMatrix(name='predmultiplier',nrow=latentExtent,ncol=n.TDpred*(Tpoints-1)+n.TIpred,
+#             values=c(rep(0,latentend),rep(1,n.TDpred*(Tpoints-1)+n.TIpred)),free=F),
+#           
+#           mxAlgebra(name='Smanifestpredsmall', Amanifest %*% invIminusAlatent %*% fullSlatent %*% predmultiplier),
+#           mxAlgebra(name='Smanifestpred',
+#           
+#           
+#           
+# #           mxAlgebra(name='predMean', Mpred %*% t(Apred)), 
+# #           mxAlgebra(name='predCov', Apred %*%  Spred %*%  t(Apred))  #predictor covariance 
+#           
+#      
+#         
+# 
+#         )
+#       }
       
       fullSlatent<-eval(parse(text=paste0("mxAlgebra(name='fullSlatent', ", paste(fullSlatentlist, collapse=' + '), ")")))
       fullSmanifest<-eval(parse(text=paste0("mxAlgebra(name='fullSmanifest', ", paste(fullSmanifestlist, collapse=' + '), ")")))
@@ -1476,7 +1509,8 @@ if(objective!='Kalman') { #configure matrices
       model <- OpenMx::mxModel(model, 
         fullSlatent, fullSmanifest, fullMlatent, 
 #         mxAlgebra(Amanifest %*% solve(bigI - Alatent) %*% Slatent %*% t(solve(bigI - Alatent)) %*% t(Amanifest) + Smanifest, name = "expCov"), 
-        mxAlgebra(Amanifest %*% invIminusAlatent %*% fullSlatent %*% t(invIminusAlatent) %*% t(Amanifest) + fullSmanifest, name = "expCov"), 
+#         mxAlgebra(Amanifest %*% invIminusAlatent %*% fullSlatent %*% t(invIminusAlatent) %*% t(Amanifest) + fullSmanifest + Smanifestpred, name = "expCov"), 
+        mxAlgebra(Amanifestcov %*% invIminusAlatent %*% fullSlatent %*% t(invIminusAlatent) %*% t(Amanifestcov) +Smanifest, name = "expCov"), 
         mxAlgebra(t(Amanifest %*% (invIminusAlatent %*% t(fullMlatent))) + Mmanifest, name = "expMean"), 
 #         mxMatrix(type = "Iden", nrow = nrow(A$labels, ncol = ncol(A$labels, name = "bigI"), 
         mxExpectationNormal(covariance = "expCov", means = "expMean", dimnames = FILTERnamesx), 
@@ -1684,7 +1718,7 @@ if(objective!='Kalman') { #configure matrices
 #         mxobj<-OpenMx::mxRun(model) #fit with the penalised likelihood
     newstarts <- try(omxGetParameters(mxobj)) #get the params
     if(showInits==TRUE) {
-      message('Generated inits from carefulFit=TRUE')
+      message('Generated start values from carefulFit=TRUE')
       message(paste(names(newstarts), ": ", newstarts, "\n"))
     }
     model<-originalmodel #revert to our single layer model without the penalties fit function
@@ -1742,13 +1776,17 @@ if(objective!='Kalman') { #configure matrices
     }
     par(mfrow=mfrow)
     deleteCheckpoints <- readline('Remove created checkpoint file, ctsem.omx? y/n \n')
-    if(deleteCheckpoints) file.remove(file='ctsem.omx')
+    if(deleteCheckpoints=='y') file.remove(file='ctsem.omx')
   }
   
   mxOption(NULL, "Default optimizer", originaloptimizer) #reset optimizer
   
-  out <- list(mxobj, ctmodelobj, ctfitargs, datawide) #roll unfitted and fitted model and ctmodelobj into one list item
-  names(out) <- c("mxobj", "ctmodelobj", "ctfitargs", "datawide")
-  class(out) <- "ctsemFit" #and give it the class of a ctsemFit object
+  if(discreteTimeModel==FALSE) {
+    out <- list(mxobj, ctmodelobj, ctfitargs, datawide) #roll unfitted and fitted model and ctmodelobj into one list item
+    names(out) <- c("mxobj", "ctmodelobj", "ctfitargs", "datawide")
+    class(out) <- "ctsemFit" #and give it the class of a ctsemFit object
+  }
+  if(discreteTimeModel==TRUE) out <- mxobj
+
   return(out)
 }

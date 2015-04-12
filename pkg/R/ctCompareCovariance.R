@@ -44,7 +44,7 @@ ctCompareCovariance<-function(ctfitobj,
           seq(-.3,.3,length.out=Tpoints),#placement within x section
         (out$original[cbind(rep(seq(j,Tpoints*n.manifest,n.manifest),times=Tpoints),
           rep(seq(i,Tpoints*n.manifest,n.manifest),each=Tpoints))]),
-        ylim=ylim, main=paste0("Cor variable ",i,"*",j),
+        main=paste0("Cor variable ",i,"*",j),
         ylab="Correlation",xlab="Measurement occasion",col="blue",pch=16,...)
       abline(v=seq(1.5,Tpoints-.5,1),col="grey",lty=2)
       

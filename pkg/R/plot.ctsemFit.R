@@ -33,7 +33,8 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
   #read in values
   for(i in 1:length(ctsummary)){ #this loop reads in the specified continuous time model so the objects are available
     assign(names(ctsummary[i]),eval(parse(text = paste0("ctsummary","$",names(ctsummary[i])))))
-  }    
+  } 
+  
   DRIFTlabels <- ctfitobj$mxobj$DRIFT$labels
   DIFFUSIONlabels <- ctfitobj$mxobj$DIFFUSION$labels
   latentNames<-ctfitobj$ctmodelobj$latentNames
@@ -43,10 +44,10 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
   n.TDpred<-ctfitobj$ctmodelobj$n.TDpred
   Tpoints<-ctfitobj$ctmodelobj$Tpoints
   stationary<-ctfitobj$ctfitargs$stationary
-  if('T0MEANS' %in% stationary) T0MEANS<-ctfitobj$mxobj$T0MEANS$values
-  if('T0VAR' %in% stationary) T0VAR<-ctfitobj$mxobj$T0VAR$values
-  if('T0TRAITEFFECT' %in% stationary) T0TRAITEFFECT<-ctfitobj$mxobj$T0TRAITEFFECT$values
-  if('T0TIPREDEFFECT' %in% stationary) T0TIPREDEFFECT<-ctfitobj$mxobj$T0TIPREDEFFECT$values
+  T0MEANS<-ctfitobj$mxobj$T0MEANS$values
+  T0VAR<-ctfitobj$mxobj$T0VAR$values
+  T0TRAITEFFECT<-ctfitobj$mxobj$T0TRAITEFFECT$values
+  T0TIPREDEFFECT<-ctfitobj$mxobj$T0TIPREDEFFECT$values
   
   if(max.time=="auto" & ctfitobj$ctfitargs$objective!='Kalman') max.time	<- max(rowSums(as.matrix(mxobj$data$observed[,paste0('dT',1:(Tpoints-1)),drop=FALSE]),na.rm=T)) 			# max time of plot 
   if(max.time=="auto" & ctfitobj$ctfitargs$objective=='Kalman') max.time  <- sum(mxobj$data$observed[,'dT1'],na.rm=T) 			# max time of plot 
@@ -166,14 +167,20 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
   
   ar<- matrix(apply(j,1,function(x) c(diag(OpenMx::expm(DRIFT*x)))),ncol=nrow(DRIFT),byrow=T)
   
-  if(standardiseCR==TRUE) standardiser<-suppressWarnings(rep(sqrt(diag(abs(asymDIFFUSION))),each=n.latent) / rep(diag(sqrt(abs(asymDIFFUSION))),times=n.latent))
+  if(standardiseCR==TRUE) {
+    standardiser<-suppressWarnings(rep(sqrt(diag(abs(asymDIFFUSION))),each=n.latent) / rep(diag(sqrt(abs(asymDIFFUSION))),times=n.latent))
+    if(any(is.nan(standardiser))) {
+      message('Unable to standardardise cross regression - check asymptotic diffusion. Plotting unstandardised.')
+      standardiseCR<-FALSE
+    }
+  }
   if(standardiseCR==FALSE) standardiser<-1
 
   cl<- matrix(apply(j,1,function(x) {
-    c((OpenMx::expm(DRIFT*x)*standardiser)[row(DRIFT)!=col(DRIFT) & mxobj$DRIFT$free==TRUE])
+    c((OpenMx::expm(DRIFT*x)*standardiser)[row(DRIFT)!=col(DRIFT) & (mxobj$DRIFT$free==TRUE | mxobj$DRIFT$values != 0)])
   }
-  ),ncol=length(DRIFT[row(DRIFT)!=col(DRIFT) & mxobj$DRIFT$free==TRUE]),byrow=T)
-  
+  ),ncol=length(DRIFT[row(DRIFT)!=col(DRIFT) & (mxobj$DRIFT$free==TRUE | mxobj$DRIFT$values != 0)]),byrow=T)
+
   arvars<-c(diag(DRIFTlabels))
   
   if(AR==TRUE){
@@ -197,13 +204,7 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
   }
   
   
-  #   if(!is.null(x$output$confidenceIntervals)) ci<-x$output$confidenceIntervals #if confidence intervals exist
-  #   if(length(grep(paste0(arvars,collapse="|"),rownames(ci))) > 0) #if some matches for AR confidenceintervals found
-  #   Alow <- ci[grep(paste0(arvars,collapse="|"),rownames(ci)),"lbound"] #extract
-  #   Ahigh <- ci[grep(paste0(arvars,collapse="|"),rownames(ci)),"ubound"]
-  
-  
-  if(CR==TRUE && ncol(cl)>1){   #CL coefficients
+  if(CR==TRUE && ncol(cl)>0){   #CL coefficients
     if(wait==TRUE){
       message("Press [enter] to display next graph")
       readline()
@@ -212,7 +213,7 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
     if(standardiseCR==FALSE) CRtitle<-"Unstandardised crossregression"
     colourvector <- rainbow(ncol(cl),v=.8) #set plot colours
     
-    clvars<-DRIFTlabels[row(DRIFT)!=col(DRIFT) & mxobj$DRIFT$free==TRUE]
+    clvars<-DRIFTlabels[row(DRIFT)!=col(DRIFT) & (mxobj$DRIFT$free==TRUE | mxobj$DRIFT$values != 0)]
     #     if(length(clvars[is.na(as.numeric(clvars))]) > 0) {#if there is 1 or more estimated cross effects
     #       clvars <- clvars[is.na(as.numeric(clvars))] #remove fixed params from clvars list
     
@@ -223,9 +224,11 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
     plot(j, cl[,1],   type = "l", xlab = xlab, ylab = ylab, 
       ylim=ylim, lwd=2,col=colourvector[1], main=CRtitle,...)
     
+    if(ncol(cl)>1){
     for(i in 2:(ncol(cl))){
       points(j, cl[,i], type = "l", lwd=2,col=colourvector[i],...)
     }    
+    }
     legend("topright",legend=paste0(clvars),text.col=colourvector,bty="n")
   }
   

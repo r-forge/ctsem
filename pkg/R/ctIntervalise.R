@@ -47,16 +47,19 @@
 ctIntervalise<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0,imputedefs=F,
   manifestNames='auto', TDpredNames='auto',TIpredNames='auto',
   digits=5,mininterval=.001,individualRelativeTime=TRUE,startoffset=0){
-  
+
   #names
   if(all(manifestNames=='auto')) manifestNames=paste0('Y',1:n.manifest)
   if(length(manifestNames) != n.manifest) stop("Length of manifestNames does not equal n.manifest!") 
-  if(n.TDpred > 0){
+  
+
+  if(n.TDpred > 0 | any(TDpredNames != 'auto')){
     if(all(TDpredNames=='auto')) TDpredNames=paste0('TD',1:n.TDpred)
     if(length(TDpredNames) != n.TDpred) stop("Length of TDpredNames does not equal n.TDpred!") 
   }
   
-  if(n.TIpred > 0){
+  
+  if(n.TIpred > 0 | any(TIpredNames != 'auto')){
     if(all(TIpredNames=='auto')) TIpredNames=paste0('TI',1:n.TIpred)
     if(length(TIpredNames) != n.TIpred) stop("Length of TIpredNames does not equal n.TIpred!") 
   }
@@ -123,9 +126,7 @@ ctIntervalise<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0,impute
   
   
   if(nrow(tempwide)==1) individualRelativeTime<-TRUE #if only 1 subject then flatten start time to 0
-  if(length(unique(
-    tempwide[,Tpoints*n.manifest+(Tpoints-1)*n.TDpred+1])
-  ) == 1) individualRelativeTime<-TRUE #if all Tpoint 1 times are equal, then flatten start time to 0
+  if(length(unique(tempwide[,Tpoints*n.manifest+(Tpoints-1)*n.TDpred+1])) == 1) individualRelativeTime<-TRUE #if all Tpoint 1 times are equal, then flatten start time to 0
   
   if(n.TIpred>0) tempwide<-tempwide[,-ncol(tempwide) : 
       -(ncol(tempwide)-n.TIpred+1),drop=FALSE] #remove TI predictors for moment
@@ -158,7 +159,7 @@ ctIntervalise<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0,impute
     message('Extra measurement occasion created in data structure -- Tpoints now ', Tpoints)
     
     colnames(temp)<- ctWideNames(n.manifest=n.manifest, n.TDpred = n.TDpred,
-      Tpoints=Tpoints, manifestNames=manifestNames, TIpredNames=TIpredNames, n.TIpred=0) #set colnames here for easier debugging, but set later too
+      Tpoints=Tpoints, manifestNames=manifestNames, TDpredNames=TDpredNames, TIpredNames=TIpredNames, n.TIpred=0) #set colnames here for easier debugging, but set later too
     
     timeindex<-((Tpoints*n.manifest+(Tpoints-1)*n.TDpred)+1) : 
       ((Tpoints*n.manifest+(Tpoints-1)*n.TDpred)+Tpoints-1) #set index of time variables in temp object
@@ -230,9 +231,7 @@ ctIntervalise<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0,impute
   #   temp[apply(temp[,timeindex],1,function(x) all(is.na(x))),timeindex]<- mininterval #set any rows with all missing times to intervals of mininterval
   
   
-  if(n.TIpred>0) temp <- cbind(temp,
-    datawide[,(ncol(datawide)-n.TIpred+1) : 
-        ncol(datawide),drop=FALSE]) #add TI predictors back  
+  if(n.TIpred>0) temp <- cbind(temp, datawide[,(ncol(datawide)-n.TIpred+1) :  ncol(datawide),drop=FALSE]) #add TI predictors back  
   
 
   colnames(temp)<-ctWideNames(n.manifest=n.manifest, n.TDpred = n.TDpred,

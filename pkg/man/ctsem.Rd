@@ -20,6 +20,6 @@ Within and between effects are estimated simultaneously by modelling both observ
 Exogenous shocks with different shapes, group differences, higher order diffusion effects and oscillating processes can all
 be simply modelled. To use ctsem, one first specifies a model using ctModel, fits this to wide format data using ctFit, then
 plot and summary methods are available to analyse the fitted object.  ctMultigroupFit may be used in place of ctFit to specify a multi group model.
-For examples, see \code{\link{ctFit}}. For more detailed information, see the vignette by running: \code{vignette(ctsem)}
+For examples, see \code{\link{ctFit}}. For more detailed information, see the vignette by running: \code{vignette('ctsem')}
 }
 

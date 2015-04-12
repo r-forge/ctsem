@@ -9,7 +9,8 @@ ctFit(datawide, ctmodelobj, confidenceintervals = NULL,
   stationary = c("T0TRAITEFFECT", "T0TIPREDEFFECT"), reasonable = TRUE,
   optimizer = "CSOLNP", retryattempts = 12, iterationSummary = TRUE,
   fit2beat = Inf, carefulFit = TRUE, showInits = FALSE,
-  meanintervals = FALSE, plotOptimization = F, nofit = FALSE)
+  meanintervals = FALSE, plotOptimization = F, nofit = FALSE,
+  discreteTimeModel = FALSE)
 }
 \arguments{
 \item{datawide}{the data you wish to fit a ctsem model to.}
@@ -23,9 +24,11 @@ to calculate 95\% confidence intervals for.  e.g. c("DRIFT", "TRAITVAR")}
 If "level" they alter the base level of process, in some sense a variable CINT.}
 
 \item{objective}{'auto' selects either 'Kalman', if fitting to single subject data,
-or 'mxRAM' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}}
+or 'mxFIML' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}}
 function from OpenMx to implement the Kalman filter.
-For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject.
+For more than one subject, 'mxFIML' specifies a wide format SEM with a row of data per subject.
+'mxRAM' is also an option, equivalent to 'mxFIML', but slower, using the standard RAM
+matrix operations.
 See \code{\link{ctMultigroupFit}} for the possibility to apply the Kalman filter over multiple subjects)}
 
 \item{stationary}{Character vector of T0 matrix names to constrain to stationarity.
@@ -52,7 +55,7 @@ if nested submodels already fit, forces optimiser to re-run until improved estim
 to force MANIFESTVAR, DRIFT, TRAITVAR, MANIFESTTRAITVAR parameters to remain close to 0, then
 fits the specified model normally, using these estimates as starting values.
 Can help with optimization when extreme parameter estimates are returned,
-though results in user specified inits being ignored for the final fit.}
+though results in user specified start values being ignored for the final fit.}
 
 \item{showInits}{if TRUE, prints the list of user specified and auto generated
 starting values for free parameters.}
@@ -64,6 +67,11 @@ starting values for free parameters.}
 output checkpoint file to working directory, then creates a plot for each parameter's values over iterations.}
 
 \item{nofit}{if TRUE, output only openmx model without fitting}
+
+\item{discreteTimeModel}{Estimate a discrete time model - ignores timing information, parameter
+estimates will correspond to those of classical vector autoregression models,
+OpenMx fit object will be directly output, thus ctsem summary and plot functionality will be unavailable.
+Time dependent predictor type also becomes irrelevant.}
 }
 \description{
 This function fits continuous time SEM models specified via \code{\link{ctModel}}
@@ -112,14 +120,15 @@ fit <- ctFit(data = ctExample3, ctmodelobj = model)
 
 ###Oscillating model from Voelkle & Oud (2013).
 data(Oscillating)
+inits <- setNames(c(-38,-.5,1,1,38,.9),c('cross','auto',
+'diffusion22','T0var11','T0var22','m2')
 oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11,
   MANIFESTVAR=matrix(c(0), nrow=1, ncol=1),
   LAMBDA=matrix(c(1, 0), nrow=1, ncol=2),
   DRIFT=matrix(c(0, "cross", 1, "auto"), nrow=2, ncol=2),
   CINT=matrix(0, ncol=1, nrow=2, ),
   DIFFUSION=matrix(c(0, 0, 0, "diffusion22"), nrow=2, ncol=2),
-  inits=matrix(c("cross", -38, "auto", -.5, "diffusion22", 1,
-    "T0var11", 1, "T0var22", 38, "m2", .9), byrow=TRUE, ncol=2))
+  startValues = inits)
 oscillatingf<-ctFit(Oscillating, oscillatingm)
 summary(oscillatingf)
 plot(oscillatingf, wait=FALSE)

@@ -36,10 +36,10 @@ chardiag<-function(x,dim=x){
 #' @param ctfitobject ctsem fit object to extract new starting values from
 #' @export
 
-ctGetInits<-function(ctfitobject){
+ctGetInits<-function(ctfitobject,...){
   if(class(ctfitobject)!='ctsemFit') stop('Specified fitobject is not of class ctsemFit')
-  inits<-matrix(OpenMx::omxGetParameters(ctfitobject$mxobj),ncol=1)
-  inits<-cbind(names(OpenMx::omxGetParameters(ctfitobject$mxobj)),inits)
+  inits<-matrix(OpenMx::omxGetParameters(ctfitobject$mxobj,...),ncol=1)
+  inits<-cbind(names(OpenMx::omxGetParameters(ctfitobject$mxobj,...)),inits)
   return(inits)
 }
 
@@ -100,10 +100,19 @@ ctRemoveObservations<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0
 }
 
 
+#' ctWideNames
+#' sets default column names for wide ctsem datasets. Primarily intended for internal ctsem usage.
+#' @param n.manifest number of manifest variables per time point in the data.
+#' @param Tpoints Maximum number of discrete time points (waves of data, or measurement occasions) 
+#' for an individual in the input data structure.
+#' @param n.TDpred number of time dependent predictors in the data structure.
+#' @param n.TIpred number of time independent predictors in the data structure.
+#'  @param manifestNames vector of character strings giving column names of manifest indicator variables
+#'  @param TDpredNames vector of character strings giving column names of time dependent predictor variables
+#'  @param TIpredNames vector of character strings giving column names of time independent predictor variables
+#'  @export
 
-# sets default column names for wide ctsem datasets
-
-ctWideNames<-function(n.manifest,n.TDpred=0,Tpoints,n.TIpred=0,manifestNames='auto',TDpredNames='auto',TIpredNames='auto'){
+ctWideNames<-function(n.manifest,Tpoints,n.TDpred=0,n.TIpred=0,manifestNames='auto',TDpredNames='auto',TIpredNames='auto'){
   
   if(all(manifestNames=='auto')) manifestNames=paste0('Y',1:n.manifest)
   
