@@ -1,10 +1,10 @@
 ## ----setup, include = FALSE, cache = FALSE, echo = FALSE----------------------
 library('ctsem')
-library('knitr')
+library(knitr)
 render_sweave()
 set.seed(22)
 opts_chunk$set(fig.path = 'figures/plots-', warning = FALSE, fig.align = 'center', width.cutoff = 80, fig.show = 'hold', eval = TRUE, echo = TRUE, message = FALSE, background = "white", prompt = TRUE, highlight = FALSE, comment = NA, tidy = FALSE, out.truncate = 80)
-options(replace.assign = TRUE, width = 80, prompt = "R> ", scipen = 999, digits = 3)
+options(replace.assign = TRUE, width = 80, prompt = "R> ", scipen = 12, digits = 3)
 
 
 
@@ -14,8 +14,8 @@ Sys.setenv(TEXINPUTS = getwd(),
   BSTINPUTS = getwd())
 
 ## ----install, echo = T, eval = F----------------------------------------------
-#  source(file = 'https://bitbucket.org/charles_driver/ctsem_public/raw/
-#    master/installctsem.R')
+#  install.packages("ctsem", repos = "http://r-forge.r-project.org")
+#  library('ctsem')
 
 ## ----wideformat, echo = FALSE-------------------------------------------------
 data('datastructure')
@@ -134,7 +134,9 @@ for(i in 1:5){
 data('ctExample2')
 tdpredmodel <- ctModel(n.manifest = 2, n.latent = 2, n.TDpred = 1, 
   Tpoints = 8, manifestNames = c('LeisureTime', 'Happiness'), 
-  TDpredNames = 'MoneyInt', latentNames = c('LeisureTime', 'Happiness'), 
+  TDpredNames = 'MoneyInt', latentNames = c('LeisureTime', 'Happiness'),
+  T0TDPREDCOV = matrix(0, nrow = 2, ncol=7),
+  TRAITTDPREDCOV = matrix(0, nrow = 2, ncol=7), 
   LAMBDA = diag(2), TRAITVAR = "auto")
 tdpredfit <- ctFit(datawide = ctExample2, ctmodelobj = tdpredmodel,
   TDpredtype = 'impulse')
@@ -152,10 +154,12 @@ summary(tdpredfit)['asymTDPREDEFFECT']
 data('ctExample2level')
 tdpredmodel <- ctModel(n.manifest = 2, n.latent = 2, n.TDpred = 1, 
   Tpoints = 8, manifestNames = c('LeisureTime', 'Happiness'), 
-  TDpredNames = 'MoneyInt', latentNames = c('LeisureTime', 'Happiness'), 
+  TDpredNames = 'MoneyInt', latentNames = c('LeisureTime', 'Happiness'),
+  T0TDPREDCOV = matrix(0, nrow = 2, ncol = 7),
+  TRAITTDPREDCOV = matrix(0, nrow = 2, ncol = 7), 
   LAMBDA = diag(2), TRAITVAR = "auto")
 tdpredfit <- ctFit(datawide = ctExample2level, ctmodelobj = tdpredmodel, 
-  confidenceintervals = 'TDPREDEFFECT', TDpredtype = 'level')
+  TDpredtype = 'level')
 
 ## ----example2TDpredlevelestimates, echo = FALSE, out.width = '3cm'------------
 summary(tdpredfit)['TDPREDEFFECT']
@@ -165,9 +169,6 @@ summary(tdpredfit)['discreteTDPREDEFFECT']
 
 ## ----example2TDpredlevelestimates2, echo = FALSE, out.width = '3cm'-----------
 summary(tdpredfit)['asymTDPREDEFFECT']
-
-## ----example2TDpredlevelestimates4, echo = FALSE------------------------------
-summary(tdpredfit)$omxsummary['CI']
 
 ## ----timeseries, cache = TRUE, echo = TRUE------------------------------------
 data('ctExample3')
@@ -182,8 +183,8 @@ data('ctExample4')
 
 basemodel <- ctModel(n.latent = 1, n.manifest = 3, Tpoints = 20,
   LAMBDA = matrix(c(1, 'lambda2', 'lambda3'), nrow = 3, ncol = 1),
-  MANIFESTMEANS = matrix(c(0, 'manifestmean2', 'manifestmean3'), 
-    nrow = 3, ncol = 1))
+  TRAITVAR='auto', MANIFESTMEANS = matrix(c(0, 'manifestmean2', 
+    'manifestmean3'), nrow = 3, ncol = 1))
 
 freemodel <- basemodel
 freemodel$LAMBDA[3, 1] <- 'groupfree'
@@ -231,14 +232,17 @@ testm <- ctModel(Tpoints = 10, n.latent = 2, n.manifest = 1,
 ## ----osscilating, cache = TRUE, echo = TRUE, eval = TRUE, include = TRUE------
 data('Oscillating')
 
+inits <- c(-38,-.5,1,1,38,.9)
+names(inits) <- c('cross','auto', 'diffusion22',
+  'T0var11','T0var22','m2')
+
 oscillatingm <- ctModel(n.latent = 2, n.manifest = 1, Tpoints = 11, 
   MANIFESTVAR = matrix(c(0), nrow = 1, ncol = 1), 
   LAMBDA = matrix(c(1, 0), nrow = 1, ncol = 2), 
   DRIFT = matrix(c(0, "crosseffect", 1, "autoeffect"), nrow = 2, ncol = 2), 
   CINT = matrix(0, ncol = 1, nrow = 2),
   DIFFUSION = matrix(c(0, 0, 0, "diffusion"), nrow = 2, ncol = 2),
-  inits = matrix(c("crosseffect", -38, "autoeffect", -.5, "diffusion", 1, 
-    "T0var11", 1, "T0var22", 38, "m2", .9), byrow = T, ncol = 2))
+  startValues = inits)
 
 oscillatingf <- ctFit(Oscillating, oscillatingm, carefulFit = FALSE)
 
@@ -246,12 +250,12 @@ oscillatingf <- ctFit(Oscillating, oscillatingm, carefulFit = FALSE)
 #  plot(oscillatingf, max.time = 10)
 
 ## ----inits, echo = TRUE, eval = FALSE-----------------------------------------
-#  newInits <- ctGetInits(example1fit)
+#  newInits <- omxGetParameters(example1fit$mxobj)
 #  
 #  modelWithInits <- ctModel(n.latent = 2, n.manifest = 2, Tpoints = 6,
 #    manifestNames = c('LeisureTime', 'Happiness'),
 #    latentNames = c('LeisureTime', 'Happiness'),
-#    LAMBDA = diag(2), inits = newInits)
+#    LAMBDA = diag(2), startValues = newInits)
 #  
 #  fitWithInits <- ctFit(data = ctExample1, ctmodelobj = modelWithInits)
 
