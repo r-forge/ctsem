@@ -8,7 +8,13 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
   'MANIFESTVAR','MANIFESTMEANS','sumMatrix',  'L3VarianceParameters',
   'groupcount','bigMeans',  'L3VarParDeviance','S','DRIFT','CINT',  
   'DIFFUSION','TRAITVAR', 'TIPREDEFFECT','TIPREDVAR','asymDIFFUSION',
-  'expCov'))
+  'expCov',
+  'cvectorize','mxData','mxMatrix','mxAlgebra','mxOption','mxExpectationRAM',
+  'mxFitFunctionML','Amanifestcov','Smanifest','mxExpectationNormal',
+  'omxSelectCols','mxFitFunctionRow','mxExpectationStateSpace',
+  'mxFitFunctionAlgebra','mxCI','mxMatrix','mxAlgebra','tr',
+  'mxFitFunctionAlgebra','mxFitFunctionMultigroup','mxCI','omxGetParameters',
+  'mxRun','omxSetParameters'))
 
 
 #' Fit a ctsem object
@@ -23,7 +29,7 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' @param TDpredtype if "impulse" (default) TDpredictors input a single shock.  
 #' If "level" they alter the base level of process, in some sense a variable CINT.
 #' @param objective 'auto' selects either 'Kalman', if fitting to single subject data, 
-#' or 'mxFIML' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}} 
+#' or 'mxFIML' for multiple subjects. For single subject data, 'Kalman' uses the \code{mxExpectationStateSpace }
 #' function from OpenMx to implement the Kalman filter. 
 #' For more than one subject, 'mxFIML' specifies a wide format SEM with a row of data per subject.
 #' 'mxRAM' is also an option, equivalent to 'mxFIML', but slower, using the standard RAM 
@@ -50,7 +56,7 @@ utils::globalVariables(c('DRIFTHATCH','invDRIFT','II','bigI','Ilatent','Alatent'
 #' fits the specified model normally, using these estimates as starting values. 
 #' Can help with optimization when extreme parameter estimates are returned, 
 #' though results in user specified start values being ignored for the final fit.
-#' @param plotOptimization If TRUE, uses checkpointing for \code{\link{mxRun}}, set to checkpoint every iteration, 
+#' @param plotOptimization If TRUE, uses checkpointing for OpenMx function \code{mxRun}, set to checkpoint every iteration, 
 #' output checkpoint file to working directory, then creates a plot for each parameter's values over iterations.
 #' @param meanintervals Use average time intervals for each column for calculation 
 #' (both faster and inaccurate to the extent that intervals vary across individuals).
@@ -1691,10 +1697,10 @@ if(objective!='Kalman') { #configure matrices
   #   }
   
   
-  model <- omxAssignFirstParameters(model, indep = FALSE) #randomly selects inits for labels with 2 or more starting values
+  model <- OpenMx::omxAssignFirstParameters(model, indep = FALSE) #randomly selects inits for labels with 2 or more starting values
   if(showInits==TRUE & carefulFit==TRUE) { #
     message('Starting values: ')
-    newstarts <- omxGetParameters(model)
+    newstarts <- OpenMx::omxGetParameters(model)
     message(paste(names(newstarts), ": ", newstarts, "\n"))
   }
   
@@ -1716,14 +1722,14 @@ if(objective!='Kalman') { #configure matrices
     #     browser()
     mxobj<-try(suppressWarnings(OpenMx::mxRun(model))) #fit with the penalised likelihood
 #         mxobj<-OpenMx::mxRun(model) #fit with the penalised likelihood
-    newstarts <- try(omxGetParameters(mxobj)) #get the params
+    newstarts <- try(OpenMx::omxGetParameters(mxobj)) #get the params
     if(showInits==TRUE) {
       message('Generated start values from carefulFit=TRUE')
       message(paste(names(newstarts), ": ", newstarts, "\n"))
     }
     model<-originalmodel #revert to our single layer model without the penalties fit function
     #     model<-OpenMx::mxModel(model, 'penalties', remove=TRUE) #and remove the penalties object
-    if(class(newstarts)!="try-error") model<-omxSetParameters(model, labels=names(newstarts), values=newstarts) #set the params of it
+    if(class(newstarts)!="try-error") model<-OpenMx::omxSetParameters(model, labels=names(newstarts), values=newstarts) #set the params of it
     #     objective<-targetObjective #revert our objective to whatever was specified
     #     setobjective() #and set it
   }
@@ -1750,7 +1756,7 @@ if(objective!='Kalman') { #configure matrices
     }
     
     #     if(retryattempts > 0){ 
-    mxobj <- ctsem::ctmxTryHard(model, 
+    mxobj <- ctmxTryHard(model, 
       fit2beat = fit2beat, showInits=showInits, checkHess=FALSE, greenOK=TRUE, 
       #         intervals = ifelse(!is.null(confidenceintervals), TRUE, FALSE), 
       #         confidenceintervals=confidenceintervals, 

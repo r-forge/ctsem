@@ -134,8 +134,8 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
     
     if(carefulFit==TRUE) {
       startparams<-c( startparams[ !( names(startparams) %in%  #get inits
-          names(omxGetParameters(omxmodel))) ], #that are not found in the new fits inits
-        omxGetParameters(omxmodel) ) #and combine the two vectors
+          names(OpenMx::omxGetParameters(omxmodel))) ], #that are not found in the new fits inits
+        OpenMx::omxGetParameters(omxmodel) ) #and combine the two vectors
     }
     
     omxmodel<- OpenMx::mxRename(omxmodel, newname=i) #change name of omxmodel for group i
@@ -270,9 +270,9 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
       mxFitFunctionMultigroup(c(paste0(unique(groupings)))),
       omxmodels)
     
-    if(carefulFit==TRUE) fullmodel<-omxSetParameters(fullmodel,labels=names(startparams),values=startparams)
+    if(carefulFit==TRUE) fullmodel<-OpenMx::omxSetParameters(fullmodel,labels=names(startparams),values=startparams)
     
-    fullmodel<-omxAssignFirstParameters(fullmodel)
+    fullmodel<-OpenMx::omxAssignFirstParameters(fullmodel)
 
     if(!is.null(confidenceintervals)) fullmodel <- OpenMx::mxModel(fullmodel, mxCI(confidenceintervals,interval = 0.95,type = "both")) #if 95% confidence intervals are to be calculated
 
@@ -283,7 +283,7 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
       fullmodel<- OpenMx::mxOption(fullmodel,'Checkpoint Count', 1)    
     }
     
-    multiout<-ctsem::ctmxTryHard(fullmodel,
+    multiout<-ctmxTryHard(fullmodel,
       showInits=showInits,
       #         intervals = ifelse(!is.null(confidenceintervals),TRUE,FALSE),
 #       confidenceintervals=confidenceintervals,

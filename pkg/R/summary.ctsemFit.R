@@ -68,11 +68,11 @@ summary.ctsemFit<-function(object,...){
     outlist<-c(outlist,'DIFFUSION')
     
           discreteDIFFUSION<-tryCatch({ matrix(solve(DRIFTHATCH) %*% ((OpenMx::expm(DRIFTHATCH * 1)) - 
-        (diag(n.latent) %x% diag(n.latent)) ) %*%rvectorize(DIFFUSION), nrow=n.latent) }, error=function(e) e )
+        (diag(n.latent) %x% diag(n.latent)) ) %*% OpenMx::rvectorize(DIFFUSION), nrow=n.latent) }, error=function(e) e )
     tryCatch({  dimnames(discreteDIFFUSION)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'discreteDIFFUSION')
     
-            asymDIFFUSION<-tryCatch({ matrix(-solve(DRIFTHATCH) %*% cvectorize(DIFFUSION),nrow=n.latent)}, error=function(e) e )
+            asymDIFFUSION<-tryCatch({ matrix(-solve(DRIFTHATCH) %*% OpenMx::cvectorize(DIFFUSION),nrow=n.latent)}, error=function(e) e )
     tryCatch({  dimnames(asymDIFFUSION)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'asymDIFFUSION')
     

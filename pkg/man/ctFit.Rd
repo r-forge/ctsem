@@ -24,7 +24,7 @@ to calculate 95\% confidence intervals for.  e.g. c("DRIFT", "TRAITVAR")}
 If "level" they alter the base level of process, in some sense a variable CINT.}
 
 \item{objective}{'auto' selects either 'Kalman', if fitting to single subject data,
-or 'mxFIML' for multiple subjects. For single subject data, 'Kalman' uses the \code{\link{mxExpectationStateSpace}}
+or 'mxFIML' for multiple subjects. For single subject data, 'Kalman' uses the \code{mxExpectationStateSpace }
 function from OpenMx to implement the Kalman filter.
 For more than one subject, 'mxFIML' specifies a wide format SEM with a row of data per subject.
 'mxRAM' is also an option, equivalent to 'mxFIML', but slower, using the standard RAM
@@ -63,7 +63,7 @@ starting values for free parameters.}
 \item{meanintervals}{Use average time intervals for each column for calculation
 (both faster and inaccurate to the extent that intervals vary across individuals).}
 
-\item{plotOptimization}{If TRUE, uses checkpointing for \code{\link{mxRun}}, set to checkpoint every iteration,
+\item{plotOptimization}{If TRUE, uses checkpointing for OpenMx function \code{mxRun}, set to checkpoint every iteration,
 output checkpoint file to working directory, then creates a plot for each parameter's values over iterations.}
 
 \item{nofit}{if TRUE, output only openmx model without fitting}

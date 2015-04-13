@@ -85,7 +85,7 @@ plot.ctsemFit<-function(x,resolution=10,wait=TRUE,max.time="auto",mean=TRUE,
       withinvar<-matrix(apply(j,1,function(x) matrix( 
         OpenMx::expm(DRIFT %x% x) %*% T0VAR  %*% t(OpenMx::expm(DRIFT %x% x)) + #initial variance
           matrix(solve(DRIFTHATCH) %*% ((OpenMx::expm(DRIFTHATCH %x% x)) -  diag(n.latent^2) ) %*% #diffusion process
-              rvectorize(DIFFUSION),nrow=n.latent),nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
+              OpenMx::rvectorize(DIFFUSION),nrow=n.latent),nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
         byrow=T,ncol=length(diag(n.latent)[row(diag(n.latent))>=col(diag(n.latent))]))
       
       colnames(withinvar)<-DIFFUSIONlabels[lower.tri(DIFFUSIONlabels,diag=T)]

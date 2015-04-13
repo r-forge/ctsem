@@ -2,7 +2,7 @@
 #' 
 #' This function generates data according to the specified ctsem model object, 
 #' which must contain fixed values for parameters. Not all T0 matrices are included at present,
-#' safest to use a high burnin (where 'high' is sufficient for the process to forget starting values'
+#' safest to use a high burnin (where 'high' is sufficient for the process to forget starting values)
 #' 
 #' 
 #' @param ctmodelobj ctsem model object from \code{\link{ctModel}}.
@@ -38,8 +38,8 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT
   
   #set up extra matrices
   DRIFTHATCH <- DRIFT %x% diag(n.latent) + diag(n.latent) %x% DRIFT #generate drifthatch
-  if(asymptotes==FALSE) dynresidualcov <- matrix(solve(DRIFTHATCH)%*%((OpenMx::expm(DRIFTHATCH %x% dT)) - #generate dynamic error cov from continuous value
-                                                  diag(1,n.latent^2))%*%rvectorize(DIFFUSION),nrow=n.latent)
+  if(asymptotes==FALSE) dynresidualcov <- matrix(solve(DRIFTHATCH) %*% ((OpenMx::expm(DRIFTHATCH %x% dT)) - #generate dynamic error cov from continuous value
+                                                  diag(1,n.latent^2)) %*% OpenMx::rvectorize(DIFFUSION),nrow=n.latent)
   if(asymptotes==TRUE) dynresidualcov <- matrix((diag(n.latent^2) - OpenMx::expm(DRIFT %x% dT) %x% OpenMx::expm(DRIFT %x% dT)) %*% c(DIFFUSION),nrow=n.latent)
   
   

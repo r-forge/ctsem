@@ -235,7 +235,7 @@ oscillatingm <- ctModel(n.latent = 2, n.manifest = 1, Tpoints = 11,
   MANIFESTVAR = matrix(c(0), nrow = 1, ncol = 1), 
   LAMBDA = matrix(c(1, 0), nrow = 1, ncol = 2), 
   DRIFT = matrix(c(0, "crosseffect", 1, "autoeffect"), nrow = 2, ncol = 2), 
-  CINT = matrix(0, ncol = 1, nrow = 2, ),
+  CINT = matrix(0, ncol = 1, nrow = 2),
   DIFFUSION = matrix(c(0, 0, 0, "diffusion"), nrow = 2, ncol = 2),
   inits = matrix(c("crosseffect", -38, "autoeffect", -.5, "diffusion", 1, 
     "T0var11", 1, "T0var22", 38, "m2", .9), byrow = T, ncol = 2))

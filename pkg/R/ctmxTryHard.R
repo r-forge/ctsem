@@ -1,7 +1,6 @@
-#' ctmxTryHard 
-#' Wrapper to mxRun that makes multiple attempts to reach an acceptable solution.
-#' Temporarily included updated version of mxTryHard from OpenMx within ctsem and renamed to avoid confusion. 
-#' @export
+# ctmxTryHard 
+# Wrapper to mxRun that makes multiple attempts to reach an acceptable solution.
+# Temporarily included updated version of mxTryHard from OpenMx within ctsem and renamed to avoid confusion. 
 
 ctmxTryHard<-function (model, extraTries = 10, greenOK = FALSE, loc = 1, 
   scale = 0.25, checkHess = TRUE, fit2beat = Inf, paste = TRUE,
