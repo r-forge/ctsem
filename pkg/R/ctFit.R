@@ -1002,7 +1002,7 @@ if(objective!='Kalman') { #configure matrices
         #         if(asymptotes==FALSE) fullAlgString <- paste0("invDRIFT %*% (omxExponential(DRIFT %x% ", defcall[i], ") - II) %*% TIPREDEFFECT")
         #         if(asymptotes==TRUE) 
         
-        if(discreteTimeModel==FALSE) fullAlgString <- paste0("(II - discreteDRIFT_T", j, ") %*% TIPREDEFFECT") 
+        if(discreteTimeModel==FALSE) fullAlgString <- paste0("invDRIFT %*% (discreteDRIFT_T", j, " - II) %*% TIPREDEFFECT") 
         if(discreteTimeModel==TRUE) fullAlgString <- paste0("TIPREDEFFECT") 
         
         TIPREDEFFECTalgs[j] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("TIPREDEFFECT", "_T", j)), 
