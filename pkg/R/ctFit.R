@@ -1711,8 +1711,7 @@ if(objective!='Kalman') { #configure matrices
   }
   
   ###optimization options
-  if(mxOption(NULL, "Default optimizer")=='CSOLNP') originaloptimizer<-'NPSOL'
-  if(mxOption(NULL, "Default optimizer")=='NPSOL') originaloptimizer<-'CSOLNP'
+  originaloptimizer<- mxOption(NULL, "Default optimizer")
   #   model<- mxOption(model, "mvnMaxPointsC", 150000) #default 5000, but 150000 improved solution finding...
   
   ###fit model
