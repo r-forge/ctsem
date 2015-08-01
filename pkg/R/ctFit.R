@@ -81,6 +81,7 @@ utils::globalVariables(c("invDRIFT","II","DRIFTlog","vec2diag","diag2vec",
 #'  then 1st time dependent predictor (all observations 1:(Tpoints-1)), further time dependent predictors, 
 #'  time intervals between observations, time independent predictors.  
 #' 
+#' @import OpenMx
 #' @examples
 #' 
 #' mfrowOld<-par()$mfrow

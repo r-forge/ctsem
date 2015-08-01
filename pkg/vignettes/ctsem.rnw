@@ -1,6 +1,14 @@
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Continuous time structural equation modelling with ctsem}
-%\VignetteDepends{knitr,ctsem,OpenMx}
+--- 
+title: "Vignette Title" 
+author: "Charles C. Driver, Johan H. L. Oud, Manuel C. Voelkle" 
+date: "`r Sys.Date()`" 
+output: rmarkdown::html_vignette 
+vignette: > 
+  %\VignetteIndexEntry{Continuous time structural equation modelling with ctsem} 
+  %\VignetteEngine{knitr::rmarkdown} 
+  %\VignetteDepends{knitr,ctsem}
+  \usepackage[utf8]{inputenc} 
+---
 
 
 \documentclass[nojss]{jss}
