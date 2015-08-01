@@ -28,7 +28,7 @@ TRAITTDPREDCOV and TIPREDCOV matrices are not accurately accounted for, at prese
 }
 \examples{
 #generate data for 2 process model, each process measured by noisy indicator,
-stable individual differences in process levels.
+#stable individual differences in process levels.
 
  generatingModel<-ctModel(Tpoints=10,n.latent=2,n.TDpred=0,n.TIpred=0,n.manifest=2,
  MANIFESTVAR=diag(.2,2),
@@ -45,7 +45,7 @@ stable individual differences in process levels.
  model<-ctModel(Tpoints=10, TRAITVAR='auto', n.latent=2,
  n.manifest=2, LAMBDA=diag(2))
 
- checkf<-ctFit(testd,checkm)
+ checkf<-ctFit(data,model)
  summary(checkf)
 
 
