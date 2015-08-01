@@ -31,7 +31,7 @@
 #'  model<-ctModel(Tpoints=10, TRAITVAR='auto', n.latent=2, 
 #'  n.manifest=2, LAMBDA=diag(2))
 #'
-#'  checkf<-ctFit(testd,checkm)
+#'  checkf<-ctFit(data,model)
 #'  summary(checkf)
 #'  
 #'  
@@ -236,13 +236,11 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=300,dT=1,asymptotes=FALSE
   #   
   if(is.null(MANIFESTTRAITVAR[1])) MANIFESTTRAITVAR <- diag(0,n.manifest) #generate 0 matrix if needed
   manifesttraiteffects<-MASS::mvrnorm(n.subjects,mu=rep(0,n.manifest),Sigma=MANIFESTTRAITVAR)
- 
 
   for(i in 1:Tpoints){
-    manifests[,((i-1)*n.manifest+1):(i*n.manifest)] <- latents[,((i-1)*n.latent+1):(i*n.latent)] %*% t(LAMBDA) + 
+    manifests[,((i-1)*n.manifest+1):(i*n.manifest)] <- (latents[,((i-1)*n.latent+1):(i*n.latent)] + traiteffect) %*% t(LAMBDA) + 
       MASS::mvrnorm(n.subjects,mu=MANIFESTMEANS,Sigma=MANIFESTVAR) + # manifest means and error variance
-      manifesttraiteffects + # manifest traits
-      traiteffect #latent traits
+      manifesttraiteffects # manifest traits
   }  
 
   

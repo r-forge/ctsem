@@ -227,7 +227,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
         
 #       if (randomPredictors==TRUE) TIPREDVAR<-tryCatch({object$mxobj$S$values[TIpredNames,TIpredNames] }, error=function(e) e )
 #       if(randomPredictors==FALSE) 
-        TIPREDVAR<-tryCatch({mxEval(TIPREDVAR,object$mxobj,compute=T) }, error=function(e) e )
+        TIPREDVAR<-tryCatch({OpenMx::mxEval(TIPREDVAR,object$mxobj,compute=T) }, error=function(e) e )
       outlist<-c(outlist,'TIPREDVAR')
       
       
@@ -308,7 +308,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
       outlist<-c(outlist,'discreteTDPREDEFFECT')
       
 
-        TDPREDVAR<-tryCatch({mxEval(TDPREDVAR,object$mxobj,compute=T) }, error=function(e) e )
+        TDPREDVAR<-tryCatch({OpenMx::mxEval(TDPREDVAR,object$mxobj,compute=T) }, error=function(e) e )
       tryCatch({  dimnames(TDPREDVAR)<-list(TDpredNames,TDpredNames)}, error=function(e) e )
       outlist<-c(outlist,'TDPREDVAR')
       
