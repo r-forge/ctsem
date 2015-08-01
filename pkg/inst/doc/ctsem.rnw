@@ -1,4 +1,0 @@
-%\VignetteIndexEntry{Continuous time structural equation modelling with ctsem}
-\documentclass{article}
-\begin{document}
-\end{document}

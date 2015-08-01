@@ -1,5 +1,5 @@
 #' Convert ctsem wide to long format
-#' @param dataset ctsem wide format data
+#' @param datawide ctsem wide format data
 #' @param Tpoints number of measurement occasions in data
 #' @param n.manifest number of manifest variables
 #' @param n.TDpred number of time dependent predictors
@@ -7,9 +7,24 @@
 #' @param manifestNames Character vector of manifest variable names.
 #' @param TDpredNames Character vector of time dependent predictor names.
 #' @param TIpredNames Character vector of time independent predictor names.
+#' @examples 
+#'  #First load the example ctsem wide format data with absolute times
+#'  data('datastructure')
+#'  datastructure #contains two time intervals (dTx), therefore 3 time points.
+#'  #Then convert to long format
+#'  longexample <- ctWideToLong(datawide = datastructure, Tpoints=3, 
+#'  n.manifest=3, manifestNames = c("Y1", "Y2", "Y3"),
+#'  n.TDpred=1, TDpredNames = "TD1", 
+#'  n.TIpred=2, TIpredNames = c("TI1", "TI2"))
+#'
+#'  #Then convert the time intervals to absolute time
+#'  long <- ctDeintervalise(datalong = longexample, id='id', dT='dT')
+#'  long
+#'
+#' 
 #' @export
 
-ctWideToLong<-function(dataset,Tpoints,n.manifest,n.TDpred=0, n.TIpred=0, 
+ctWideToLong<-function(datawide,Tpoints,n.manifest,n.TDpred=0, n.TIpred=0, 
   manifestNames='auto',TDpredNames='auto',TIpredNames='auto'){ 
   
   #names
@@ -26,13 +41,13 @@ ctWideToLong<-function(dataset,Tpoints,n.manifest,n.TDpred=0, n.TIpred=0,
     if(length(TIpredNames) != n.TIpred) stop("Length of TIpredNames does not equal n.TIpred!") 
   }
   
-  datawide<-as.matrix(dataset,nrow=nrow(dataset),ncol=ncol(dataset)) #set to matrix for manipulations
-  n.subjects<-nrow(datawide) #calculate number of subjects in dataset
+  datawide<-as.matrix(datawide,nrow=nrow(datawide),ncol=ncol(datawide)) #set to matrix for manipulations
+  n.subjects<-nrow(datawide) #calculate number of subjects in datawide
   
   
   datalong<-matrix(NA,nrow=n.subjects*Tpoints,ncol=1+n.manifest+1+n.TDpred+n.TIpred) #create blank datalong matrix
   colnames(datalong)<-paste0("name",1:ncol(datalong)) #create default colnames
-  colnames(datalong)[1:(1+n.manifest)]<-c("subject",manifestNames) #set column names for manifests
+  colnames(datalong)[1:(1+n.manifest)]<-c("id",manifestNames) #set column names for manifests
   colnames(datalong)[ncol(datalong)-n.TIpred]<-"dT" #set colnames for time intervals
   
   if(n.TDpred>0)  colnames(datalong)[(1+n.manifest+1):(1+n.manifest+n.TDpred)]<-TDpredNames #set TDpredictor colnames    

@@ -22,43 +22,40 @@
 #' @param latentNames n.latent length vector of latent variable names 
 #' (used for naming parameters, defaults to eta1, eta2, etc).
 #' 
-#' @param T0VAR symmetric n.latent*n.latent matrix of latent process initial variance / covariance. 
-#' "auto" freely estimates all parameters and generates starting values.
+#' @param T0VAR lower triangular n.latent*n.latent cholesky matrix of latent process initial variance / covariance. 
+#' "auto" freely estimates all parameters.
 #' 
 #' @param T0MEANS n.latent*1 matrix of latent process means at first time point, T0. 
-#' "auto" freely estimates all parameters and generates starting values.
+#' "auto" freely estimates all parameters.
 #' 
 #' @param MANIFESTMEANS n.manifest*1 matrix of manifest means.  
-#' "auto" fixes all parameters to 0.
+#' "auto" fixes all parameters to 0, but some may need to be freed (by specifying character labels) when a process has multiple indicators.
 #' 
-#' @param MANIFESTVAR symmetric n.manifest*n.manifest matrix of variance / covariance 
+#' @param MANIFESTVAR lower triangular n.manifest*n.manifest cholesky matrix of variance / covariance 
 #' between manifests at each measurement occasion (i.e. measurement error / residual).  
-#' "auto" freely estimates variance parameters and generates starting values, 
-#' and fixes covariances between manifests to 0.
+#' "auto" freely estimates variance parameters, 
+#' and fixes covariances between manifests to 0. "free" frees all values, including covariances.
 #' 
 #' @param DRIFT n.latent*n.latent DRIFT matrix of continuous auto and cross effects, 
 #' relating the processes over time. 
-#' "auto" freely estimates all parameters and generates starting values.
+#' "auto" freely estimates all parameters.
 #' 
 #' @param CINT n.latent * 1 matrix of continuous intercepts, allowing for non 0 
-#' stationary levels of the processes.  
-#' "auto" freely estimates all parameters and generates starting values.
+#' asymptotic levels of the processes.  
+#' "auto" freely estimates all parameters.
 #' 
-#' @param DIFFUSION symmetric n.latent*n.latent matrix of diffusion process 
-#' variance and covariance (generates latent error / innovation).
-#' "auto" freely estimates all parameters and generates starting values.
+#' @param DIFFUSION lower triangular n.latent*n.latent cholesky matrix of diffusion process 
+#' variance and covariance (latent error / dynamic innovation).
+#' "auto" freely estimates all parameters.
 #' 
 #' @param TRAITVAR Either NULL, if no trait / individual heterogeneity effect, 
-#' or symmetric n.latent*n.latent matrix of trait variance / covariance.
-#' "auto" freely estimates all parameters and generates starting values.
-#' 
-#' @param T0TRAITEFFECT n.latent*n.latent matrix of effect of traits on latents at T0. 
-#' If TRAITVAR is NULL (default), T0TRAITEFFECT is also set to NULL, 
-#' and ignored in any case.
+#' or lower triangular n.latent*n.latent cholesky matrix of trait variance / covariance.
+#' "auto" freely estimates all parameters.
 #' 
 #' @param MANIFESTTRAITVAR either NULL (default) if no trait variance / individual heterogeneity in the level of
-#' the manifest indicators, otherwise a symmetric n.manifest * n.manifest variance / covariance matrix. 
-#' Set to "auto" to include and free all parameters.
+#' the manifest indicators, otherwise a lower triangular n.manifest * n.manifest variance / covariance matrix. 
+#' Set to "auto" to include and free all parameters - but identification problems will arise if \code{TRAITVAR} is 
+#' also set.
 #' 
 #' @param n.TDpred Number of time dependent predictors in the dataset.  
 #' Each time dependent predictor must have Tpoints-1 columns 
@@ -70,33 +67,33 @@
 #' as they appear in the data structure, without the _Tx time point suffix.  
 #' Default names are TD1, TD2, etc.
 #' 
-#' @param TDPREDMEANS (n.TDpred*(Tpoints-1)) rows * 1 column matrix of time dependent predictor means.
+#' @param TDPREDMEANS (n.TDpred * (Tpoints - 1)) rows * 1 column matrix of time dependent predictor means.
 #' If 'auto', the means are freely estimated.  Otherwise, 
 #' the means for the Tpoints-1 observations of your first time dependent predictor 
 #' are followed by those of TDpred 2, and so on.
 #' 
 #' @param TDPREDEFFECT n.latent*n.TDpred matrix of effects from time dependent predictors to latent processes.
-#' Effects from 1:n.TDpred columns TDpredictors to 1:n.latent rows of latent processes.
-#' "auto" freely estimates all parameters and generates starting values.
+#' Effects from 1:n.TDpred columns TDpredictors go to 1:n.latent rows of latent processes.
+#' "auto" freely estimates all parameters.
 #' 
 #' @param T0TDPREDCOV n.latent rows * ((Tpoints-1) rows * n.TDpred) columns covariance matrix 
 #' between latents at T0 and time dependent predictors.
-#' "auto" freely estimates all parameters and generates starting values.
+#' "auto" freely estimates all parameters.
 #' 
-#' @param TDPREDVAR symmetric (n.TDpred * (Tpoints-1)) rows * (n.TDpred * (Tpoints-1)) columns variance / covariance
-#' matrix for time dependent predictors.
-#' "auto" (default) freely estimates all parameters and generates random starting values.
+#' @param TDPREDVAR lower triangular (n.TDpred * (Tpoints-1)) rows * (n.TDpred * (Tpoints-1)) columns variance / covariance
+#' cholesky matrix for time dependent predictors.
+#' "auto" (default) freely estimates all parameters.
 #' 
 #' @param TRAITTDPREDCOV n.latent rows * (n.TDpred*(Tpoints-1)) columns covariance matrix of 
 #' latent traits and time dependent predictors.  
 #' The Tpoints-1 columns of the first preditor are followed by those of the second and so on.
 #' Covariances with the trait variance of latent process 1 are specified in row 1, process 2 in row 2, etc.
 #' "auto" (default) freely estimates covariance between time dependent predictors and traits, 
-#' (if both exist, otherwise NULL).
+#' (if both exist, otherwise this matrix is set to NULL, and ignored in any case).
 #' 
 #' @param TDTIPREDCOV (n.TDpred * (Tpoints-1)) rows * n.TIpred columns covariance
 #' matrix between time dependent and time independent predictors.
-#' "auto" (default) freely estimates all parameters and generates random starting values.
+#' "auto" (default) freely estimates all parameters.
 #' 
 #' @param n.TIpred Number of time independent predictors. 
 #' Each TIpredictor is inserted at the right of the data matrix, after the time intervals.
@@ -111,35 +108,59 @@
 #' "auto" freely estimates all parameters and generates starting values.
 #' 
 #' @param T0TIPREDEFFECT n.latent*n.TIpred effect matrix of time independent 
-#' predictors on latents at T0.
-#' "constrained" replicates labels from TIPREDEFFECT, forcing the time 0 effect to be the same as the long run effect.
-#' This can be freed by setting to 'auto' or manually specifying, but may make optimization more difficult.
+#' predictors on latents at T0. "auto" freely estimates all parameters, though note that under the default 
+#' setting of \code{stationary} for \code{ctFit}, this matrix is ignored as the effects are determined based on
+#' the overall process parameters.
 #' 
 #' @param TIPREDVAR symmetric n.TIpred * n.TIpred variance / covariance
 #' matrix for all time independent predictors.
-#' "auto" (default) freely estimates all parameters and generates random starting values.
+#' "auto" (default) freely estimates all parameters.
 #' 
 #' @param startValues a named vector, where the names of each value must match a parameter in the specified model,
 #' and the value sets the starting value for that parameter during optimization.
 #' If not set, random starting values representing relatively stable processes with small effects and 
 #' covariances are generated by ctFit.  
 #' Better starting values may improve model fit speed and the chance of an appropriate model fit.  
+#' @examples 
 #' 
-#' @param initsToFixed if TRUE, uses the provided list of starting values as fixed values instead of starting values
-#' (convenient way to extract previous fit parameters using omxGetParameters and constrain a new model)
+#'  ### impulse and level change time dependent predictor example from Driver, Oud, Voelkle (2015)
+#'  data('ctExample2')
+#'  tdpredmodel <- ctModel(n.manifest = 2, n.latent = 3, n.TDpred = 1, 
+#'  Tpoints = 8, manifestNames = c('LeisureTime', 'Happiness'), 
+#'  TDpredNames = 'MoneyInt', 
+#'  latentNames = c('LeisureTime', 'Happiness', 'MoneyIntLatent'),
+#'  T0TDPREDCOV = matrix(0, nrow = 3, ncol = 7),
+#'  TRAITTDPREDCOV = matrix(0, nrow = 3, ncol = 7), 
+#'  LAMBDA = matrix(c(1,0, 0,1, 0,0), ncol = 3), TRAITVAR = "auto")
+#'
+#'  tdpredmodel$TRAITVAR[3, ] <- 0
+#'  tdpredmodel$TRAITVAR[, 3] <- 0
+#'  tdpredmodel$DIFFUSION[, 3] <- 0
+#'  tdpredmodel$DIFFUSION[3, ] <- 0
+#'  tdpredmodel$T0VAR[3, ] <- 0
+#'  tdpredmodel$T0VAR[, 3] <- 0
+#'  tdpredmodel$CINT[3] <- 0
+#'  tdpredmodel$T0MEANS[3] <- 0
+#'  tdpredmodel$TDPREDEFFECT[3, ] <- 1
+#'  tdpredmodel$DRIFT[3, ] <- 0
+#'
+#'  tdpredfit <- ctFit(datawide = ctExample2, ctmodelobj = tdpredmodel)
+#'
+#'  summary(tdpredfit)
+#' 
 #' @export
 
 ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA, 
   manifestNames='auto', latentNames='auto', 
   T0VAR="auto", T0MEANS="auto", MANIFESTMEANS="auto", MANIFESTVAR="auto", 
   DRIFT="auto", CINT="auto", DIFFUSION="auto",
-  TRAITVAR=NULL, T0TRAITEFFECT="auto", MANIFESTTRAITVAR=NULL,
+  TRAITVAR=NULL, MANIFESTTRAITVAR=NULL,
   n.TDpred=0, TDpredNames='auto', TDPREDMEANS="auto", TDPREDEFFECT="auto", 
   T0TDPREDCOV="auto", TDPREDVAR="auto",  
   TRAITTDPREDCOV="auto", TDTIPREDCOV='auto',
   n.TIpred=0, TIpredNames='auto', TIPREDMEANS="auto", TIPREDEFFECT="auto", 
   T0TIPREDEFFECT="auto", TIPREDVAR="auto", 
-  startValues=NULL, initsToFixed=FALSE){
+  startValues=NULL){
   
   
   
@@ -211,6 +232,7 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   
   if(nrow(T0VAR)!=n.latent | ncol(T0VAR)!=n.latent) stop("Dimensions of T0VAR matrix are not n.latent * n.latent")
   
+
   
   
   
@@ -223,11 +245,18 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   
   
   
-  if(MANIFESTVAR[1]=="auto") MANIFESTVAR<-ctLabel(TDpredNames=TDpredNames,TIpredNames=TIpredNames,
+  if(all(MANIFESTVAR=="auto")) {
+    MANIFESTVAR<-ctLabel(TDpredNames=TDpredNames,TIpredNames=TIpredNames,
     manifestNames=manifestNames,latentNames=latentNames,matrixname="MANIFESTVAR",n.latent=n.latent,
     n.manifest=n.manifest,n.TDpred=n.TDpred,n.TIpred=n.TIpred,Tpoints=Tpoints)
+   MANIFESTVAR[row(MANIFESTVAR) != col(MANIFESTVAR)] <- 0
+  }
   
-  MANIFESTVAR[row(MANIFESTVAR) != col(MANIFESTVAR)] <-0
+  if(all(MANIFESTVAR=="free")){
+    MANIFESTVAR<-ctLabel(TDpredNames=TDpredNames,TIpredNames=TIpredNames,
+      manifestNames=manifestNames,latentNames=latentNames,matrixname="MANIFESTVAR",n.latent=n.latent,
+      n.manifest=n.manifest,n.TDpred=n.TDpred,n.TIpred=n.TIpred,Tpoints=Tpoints)
+  }
   
   if(nrow(MANIFESTVAR)!=n.manifest | ncol(MANIFESTVAR)!=n.manifest) stop("Dimensions of MANIFESTVAR matrix are not n.manifest * n.manifest")
   
@@ -268,15 +297,7 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   
   
   
-  
-  if(!is.null(TRAITVAR) && T0TRAITEFFECT[1]=="constrained")  T0TRAITEFFECT<-diag(n.latent)
-  if(!is.null(TRAITVAR) && T0TRAITEFFECT[1]=="auto")  T0TRAITEFFECT<-ctLabel(TDpredNames=TDpredNames,TIpredNames=TIpredNames,manifestNames=manifestNames,latentNames=latentNames,matrixname="T0TRAITEFFECT",n.latent=n.latent,
-    n.manifest=n.manifest,n.TDpred=n.TDpred,n.TIpred=n.TIpred,Tpoints=Tpoints)
-  if(is.null(TRAITVAR) && T0TRAITEFFECT[1]=="auto") T0TRAITEFFECT<-NULL  
-  if(!is.null(TRAITVAR)) if(nrow(T0TRAITEFFECT)!= n.latent | ncol(T0TRAITEFFECT) != n.latent) stop("Dimensions of T0TRAITEFFECT are not n.latent * n.latent")
-  
-  
-  
+
   
   
   if(!is.null(MANIFESTTRAITVAR) && MANIFESTTRAITVAR[1]=="auto") MANIFESTTRAITVAR<-ctLabel(TDpredNames=TDpredNames,TIpredNames=TIpredNames,manifestNames=manifestNames,latentNames=latentNames,matrixname="MANIFESTTRAITVAR",n.latent=n.latent,
@@ -345,7 +366,7 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   
   
   
-  if(T0TIPREDEFFECT[1]=="constrained" && n.TIpred > 0) T0TIPREDEFFECT<-TIPREDEFFECT
+
   if(T0TIPREDEFFECT[1]=="auto" && n.TIpred > 0) T0TIPREDEFFECT <- ctLabel(TDpredNames=TDpredNames,
     TIpredNames=TIpredNames,manifestNames=manifestNames,latentNames=latentNames,matrixname="T0TIPREDEFFECT",n.latent=n.latent,
     n.manifest=n.manifest,n.TDpred=n.TDpred,n.TIpred=n.TIpred,Tpoints=Tpoints)
@@ -383,7 +404,7 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   
   
   
-  if(TDTIPREDCOV=="auto" & n.TDpred > 0 & n.TIpred > 0)  TDTIPREDCOV <- ctLabel(TDpredNames=TDpredNames,
+  if(all(TDTIPREDCOV=="auto") & n.TDpred > 0 & n.TIpred > 0)  TDTIPREDCOV <- ctLabel(TDpredNames=TDpredNames,
     TIpredNames=TIpredNames,manifestNames=manifestNames,latentNames=latentNames,matrixname="TDTIPREDCOV",n.latent=n.latent,
     n.manifest=n.manifest,n.TDpred=n.TDpred,n.TIpred=n.TIpred,Tpoints=Tpoints)
   
@@ -411,21 +432,20 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   
   
   
-  ###implement model checks here
-  checkSymmetry(DIFFUSION)
-  checkSymmetry(MANIFESTVAR)
-  checkSymmetry(T0VAR)
+  ###model checks
+  
+  #lower triangular check
+  for(tempmatname in c('T0VAR','MANIFESTVAR','TRAITVAR','MANIFESTTRAITVAR','TDPREDVAR','TIPREDVAR')){
+    assign('tempmat',get(tempmatname))
+    if(is.null(tempmat)) next
+    if(all(suppressWarnings(as.numeric(tempmat[upper.tri(tempmat)])) %in% 0)) next
+    stop(paste0(tempmatname,' is not lower triangular! Covariance matrices must be specified in cholesky decomposed form.'))
+  }
+  
  
   if(any(dim(LAMBDA)!=c(n.manifest,n.latent))) stop("Incorrect LAMBDA structure specified - check number or rows and columns")
-  if(!is.null(TRAITVAR[1])) { checkSymmetry(TRAITVAR) }
   
-  #check no phit1traits without traitvars
-  if(isx(is.null(TRAITVAR))){
-    if(isx(!all(TRAITVAR==0))){
-      if(isx(any(!is.na(T0TRAITEFFECT)))){
-        if(isx(any(T0TRAITEFFECT>0))){
-          stop("Latent and Trait covariances specified (T0TRAITEFFECT) with no trait variance (TRAITVAR)")
-        }}}}
+
   
   
   
@@ -435,7 +455,7 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   completemodel<-list(n.manifest,n.latent,n.TDpred,n.TIpred,Tpoints,LAMBDA,
     manifestNames,latentNames,TDpredNames,TIpredNames,
     T0VAR,T0MEANS,MANIFESTMEANS,MANIFESTVAR,DRIFT,CINT,DIFFUSION,
-    TRAITVAR,T0TRAITEFFECT,MANIFESTTRAITVAR,
+    TRAITVAR,MANIFESTTRAITVAR,
     TDPREDEFFECT, TDPREDMEANS, T0TDPREDCOV, TRAITTDPREDCOV,
     TIPREDEFFECT, TIPREDMEANS, T0TIPREDEFFECT,
     TIPREDVAR, TDPREDVAR,TDTIPREDCOV,   
@@ -444,7 +464,7 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   names(completemodel)<-c("n.manifest","n.latent","n.TDpred","n.TIpred","Tpoints","LAMBDA",
     "manifestNames","latentNames","TDpredNames","TIpredNames",
     "T0VAR","T0MEANS","MANIFESTMEANS","MANIFESTVAR","DRIFT","CINT","DIFFUSION",
-    "TRAITVAR","T0TRAITEFFECT","MANIFESTTRAITVAR",
+    "TRAITVAR","MANIFESTTRAITVAR",
     'TDPREDEFFECT', 'TDPREDMEANS', 'T0TDPREDCOV', 'TRAITTDPREDCOV',
     'TIPREDEFFECT', 'TIPREDMEANS', 'T0TIPREDEFFECT',
     'TIPREDVAR', 'TDPREDVAR','TDTIPREDCOV',  
@@ -452,26 +472,26 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   
   
   
-  if(initsToFixed==TRUE){ #if we want to take init params as fixed instead - can be a simple way to vary models
-    
-    for( i in 1:length(completemodel)){
-      
-      if(is.matrix(completemodel[[i]])){
-        
-        fixed<-completemodel[[i]]
-
-        
-        if(!is.null(startValues)){ #if there are some startValues specified, check each part of x
-          for( j in 1:length(startValues)){
-            
-              fixed[grepl(names(startValues)[j], fixed)] <- startValues[j]
-          }
-        }
-        
-        completemodel[[i]]<-fixed     
-      }
-  }
-  }
+#   if(initsToFixed==TRUE){ #if we want to take init params as fixed instead - can be a simple way to vary models
+#     
+#     for( i in 1:length(completemodel)){
+#       
+#       if(is.matrix(completemodel[[i]])){
+#         
+#         fixed<-completemodel[[i]]
+# 
+#         
+#         if(!is.null(startValues)){ #if there are some startValues specified, check each part of x
+#           for( j in 1:length(startValues)){
+#             
+#               fixed[grepl(names(startValues)[j], fixed)] <- startValues[j]
+#           }
+#         }
+#         
+#         completemodel[[i]]<-fixed     
+#       }
+#   }
+#   }
   
   
   class(completemodel)<-"ctsemInit"

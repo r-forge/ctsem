@@ -9,13 +9,92 @@
 #' @param n.subjects Number of subjects to output.
 #' @param burnin Number of initial time points to discard (to simulate stationary data)
 #' @param dT Time interval (delta T) to use, defaults to 1.
-#' @param TDpredtype Time dependent predictor type to generate data for, if specified.
 #' @param asymptotes Are the parameters provided asymptotic paramters, or the regular continuous time parameters?
+#' @details TRAITTDPREDCOV and TIPREDCOV matrices are not accurately accounted for, at present.
+#' @examples 
+#' 
+#' #generate data for 2 process model, each process measured by noisy indicator, 
+#' #stable individual differences in process levels.
+#' 
+#'  generatingModel<-ctModel(Tpoints=10,n.latent=2,n.TDpred=0,n.TIpred=0,n.manifest=2,
+#'  MANIFESTVAR=diag(.2,2),
+#'  LAMBDA=diag(1,2), 
+#'  DRIFT=matrix(c(-.2,-.15,0,-.1),nrow=2),
+#'  TRAITVAR=matrix(c(10,-3,0,14.2),nrow=2),
+#'  DIFFUSION=matrix(c(10,2,0,4),2),
+#'  CINT=matrix(c(1,0),nrow=2),
+#'  T0MEANS=matrix(0,ncol=1,nrow=2),
+#'  T0VAR=diag(1,2))
+#'  
+#'  data<-ctGenerate(generatingModel,n.subjects=300,burnin=500)
+#'  
+#'  model<-ctModel(Tpoints=10, TRAITVAR='auto', n.latent=2, 
+#'  n.manifest=2, LAMBDA=diag(2))
+#'
+#'  checkf<-ctFit(testd,checkm)
+#'  summary(checkf)
+#'  
+#'  
+#'#### with 2 process from 4 indicators, latent trait, TDpred and TIpred 
+#' Tpoints=8
+#' n.latent=2
+#' n.manifest=4
+#' n.TDpred=1
+#' n.TIpred=1
+#' 
+#' generatingModel<-ctModel(Tpoints=Tpoints,n.latent=n.latent,
+#'  n.TDpred=n.TDpred,n.TIpred=n.TIpred,n.manifest=n.manifest,
+#'  LAMBDA=matrix(c(1,.4,.8,0,0,0,0,1),nrow=n.manifest,ncol=n.latent),
+#'  MANIFESTVAR=diag(c(.2),n.manifest),
+#'  MANIFESTTRAITVAR=matrix(c(.3,.1,0,.2,  0,.2,0,.15, 
+#'  0,0,0,0, 0,0,0,.4) ,n.manifest,n.manifest),
+#'  MANIFESTMEANS=matrix(c(0,0,0,0),n.manifest,1),
+#'  DRIFT=matrix(c(-.23,.1,.0,-.4),n.latent),
+#'  DIFFUSION=matrix(c(8.3,5.1,0,8.4),n.latent,n.latent),
+#'  CINT=matrix(c(0,.4),n.latent,1),
+#'  TDPREDEFFECT=matrix(c(1.2,-.4),nrow=n.latent,ncol=n.TDpred),
+#'  TIPREDEFFECT=matrix(c(.32,-.08),nrow=n.latent,ncol=n.TIpred),
+#'  TDPREDMEANS=matrix(c(0,0,1,rep(0, (Tpoints-1-3)*n.TDpred)),nrow=n.TDpred*(Tpoints-1)),
+#'  TIPREDMEANS=matrix(0,nrow=n.TIpred),
+#'  TDPREDVAR=diag(0.1,n.TDpred*(Tpoints-1)),
+#'  TIPREDVAR=diag(.4,n.TIpred),
+#'  T0MEANS=matrix(0,ncol=1,nrow=n.latent))
+#'  
+#' data<-ctGenerate(generatingModel,n.subjects=100,burnin=500)
+#' 
+#' model<-ctModel(n.latent=n.latent, n.TDpred=n.TDpred, n.TIpred=n.TIpred, 
+#' n.manifest=n.manifest, 
+#' LAMBDA=matrix(c(1,"l2","l3",0,0,0,0,1),n.manifest,n.latent),  
+#' TRAITVAR='auto',Tpoints=Tpoints)
+#' 
+#' fit<-ctFit(data,model, stationary=c('T0VAR','T0MEANS', 'T0TIPREDEFFECT'))
+#' summary(checkf)  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
+#'  
 #' @export
 
-ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT=1,asymptotes=FALSE){
-  
-  checkOpenMx('ctGenerate')
+ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=300,dT=1,asymptotes=FALSE){
   
   ###read in model
   for(i in 1:length(ctmodelobj)){ #this loop reads in the specified continuous time model
@@ -35,6 +114,14 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT
                                       ncol=ncol(get(names(ctmodelobj[i])))))
     }
   }
+  
+  #lower triangular transform
+  for(tempmatname in c('T0VAR','MANIFESTVAR','TRAITVAR','MANIFESTTRAITVAR','TDPREDVAR','TIPREDVAR')){
+
+    tryCatch(assign(tempmatname,get(tempmatname) %*% t(get(tempmatname))), error=function(e) {
+      assign(tempmatname,NULL)})
+  }
+  
   
   #set up extra matrices
   DRIFTHATCH <- DRIFT %x% diag(n.latent) + diag(n.latent) %x% DRIFT #generate drifthatch
@@ -59,31 +146,22 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,TDpredtype='impulse',dT
   
   ####traits
   traiteffect<-matrix(0,nrow=n.subjects,ncol=n.latent) #create traiteffect matrix with 0 effect
+  trait<-matrix(0,nrow=n.subjects,ncol=n.latent)
   if(!is.null(TRAITVAR[1])) { #if traits are specified
-    if(!all(is.numeric(T0TRAITEFFECT))){#if not all of T0TRAITEFFECT is not fixed
-      T0TRAITEFFECT<-diag(100,n.latent) #arbitrarily set it
-      if(burnin==0) burnin<-200 #and ensure burnin is adequate (as for T0VAR)
-    }
-if(asymptotes==FALSE) traitloading<- solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% dT) - diag(1,n.latent)) #calc trait loadings to latents for small(continuous) traitvar
-if(asymptotes==TRUE) traitloading<-  diag(n.latent)- OpenMx::expm(DRIFT %x% dT)  #calc trait loadings to latents for asymptotic traitvar
-    trait <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.latent),Sigma=TRAITVAR,tol=1) #generate trait effects    
-    traiteffect<- trait %*% t(traitloading)
- 
-#     withinphi <- T0VAR - T0TRAITEFFECT %*% TRAITVAR %*% T0TRAITEFFECT #calculate non-trait related variance for T0
-  }
-  
+ trait <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.latent),Sigma=TRAITVAR,tol=1) #generate trait effects    
+    traiteffect<- trait %*% t(LAMBDA)
+ }
   
   #####predictors
   
   TDpreds<-matrix(NA,nrow=n.subjects,ncol=n.TDpred*(Tpoints-1))
   TDpredeffects <- matrix(0,nrow=n.subjects,ncol=n.latent*(Tpoints-1)) #create 0 TDpredeffects in case no TDpreds
   if (n.TDpred>0) { #but if TDpreds exist
-    if(TDpredtype=='level') TDpredparam <- solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% dT) - diag(1, n.latent)) %*%  TDPREDEFFECT #calculate effect size
-    if(TDpredtype=='impulse') TDpredparam <- OpenMx::expm(DRIFT %x% dT) %*%  TDPREDEFFECT #calculate effect size
+    TDpredparam <- OpenMx::expm(DRIFT %x% dT) %*%  TDPREDEFFECT #calculate effect size
     TDpreds <- MASS::mvrnorm(n=n.subjects,mu=TDPREDMEANS, #generate TDpred variables from TDPREDMEANS and TDPREDVAR
                        Sigma=TDPREDVAR ,tol=1)
     
-    TDpreds <- TDpreds + traiteffect %*% TRAITTDPREDCOV
+    TDpreds <- TDpreds + trait %*% TRAITTDPREDCOV
     
     for(l in 1:n.latent){ #for each latent process
       for(i in 1:(Tpoints-1)){#for each latent state variable except the final ones
@@ -105,7 +183,7 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- OpenMx::expm(DRIFT %x% dT) 
               Sigma=TIPREDVAR, tol=1)
       ,nrow=n.subjects)
       #     TIpredeffects<-matrix(TIpreds*rep(TIpredparam,n.subjects*n.latent),nrow=n.subjects,ncol=n.TIpred) #generate effects on the latents
-      TIpredeffects<-matrix(TIpreds %*% t(TIPREDEFFECTdiscrete^2),nrow=n.subjects,ncol=n.latent) #generate effects on the latents
+      TIpredeffects<-matrix(TIpreds %*% t(TIPREDEFFECTdiscrete),nrow=n.subjects,ncol=n.latent) #generate effects on the latents
   }
   
   ####cint
@@ -125,7 +203,7 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- OpenMx::expm(DRIFT %x% dT) 
   
   ########create latents  
   latents <- matrix(,nrow=n.subjects,ncol=n.latent*Tpoints) #create latent matrix
-  latents[,1:n.latent] <- traiteffect + matrix(T0MEANS,nrow=n.subjects,ncol=n.latent,byrow=T)+ T0VAReffect #create T0 latents including all possible effects
+  latents[,1:n.latent] <- matrix(T0MEANS,nrow=n.subjects,ncol=n.latent,byrow=T)+ T0VAReffect #create T0 latents including all possible effects
   
   #burnin
   if(burnin>0){
@@ -133,8 +211,10 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- OpenMx::expm(DRIFT %x% dT) 
       drifteffect <- latents[,(i-n.latent):(i-1)] %*% t(OpenMx::expm(DRIFT %x% dT))#effect of past time points    
       qeffect <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.latent),Sigma=dynresidualcov,tol=1) #effect of q noise
       
-      latents[,i:(i+n.latent-1)]<-drifteffect+cinteffect+qeffect+traiteffect+TIpredeffects#sum of all constant effects at t to create latents
+      latents[,i:(i+n.latent-1)]<-drifteffect+cinteffect+qeffect+TIpredeffects#sum of all constant effects at t to create latents
     }
+
+    
     latents<-as.matrix(latents[,-1:-(burnin*n.latent),drop=FALSE]) #remove burnin from latents
     Tpoints<-Tpoints-burnin #remove burnin from Tpoints
   }
@@ -144,30 +224,27 @@ if(asymptotes==TRUE) traitloading<-  diag(n.latent)- OpenMx::expm(DRIFT %x% dT) 
   for(i in seq(n.latent+1,n.latent*Tpoints,n.latent)){ #for every time block of latents after the first
     drifteffect <- latents[,(i-n.latent):(i-1)] %*% t(OpenMx::expm(DRIFT %x% dT))#effect of past time points    
     qeffect <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.latent),Sigma=dynresidualcov,tol=1) #effect of q noise
-    latents[,i:(i+n.latent-1)]<-drifteffect+cinteffect+qeffect+traiteffect+TIpredeffects+
+    latents[,i:(i+n.latent-1)]<-drifteffect+cinteffect+qeffect+TIpredeffects+
       TDpredeffects[,(i-n.latent) : (i-1)]  #sum of all effects at t to create latents
   }
   
+  
   #generate indicators from latents
 
-  manifests<-matrix(,nrow=n.subjects,ncol=n.manifest*Tpoints) #create latent matrix
+  manifests<-matrix(0,nrow=n.subjects,ncol=n.manifest*Tpoints) #create manifests matrix 
   
   #   
-  mantraiteffect<-matrix(0,nrow=n.subjects,ncol=n.manifest) #create traiteffect matrix with 0 effect
-  if(!is.null(MANIFESTTRAITVAR[1])) { #if traits are specified
-    mantraiteffect <- MASS::mvrnorm(n=n.subjects,mu=rep(0,n.manifest),Sigma=MANIFESTTRAITVAR,tol=1) #generate trait effects
-  }
-  
-  #   
+  if(is.null(MANIFESTTRAITVAR[1])) MANIFESTTRAITVAR <- diag(0,n.manifest) #generate 0 matrix if needed
+  manifesttraiteffects<-MASS::mvrnorm(n.subjects,mu=rep(0,n.manifest),Sigma=MANIFESTTRAITVAR)
+ 
+
   for(i in 1:Tpoints){
-    manifests[,((i-1)*n.manifest+1):(i*n.manifest)] <- latents[,((i-1)*n.latent+1):(i*n.latent)] %*% t(LAMBDA)
-  }
-  
-  for(i in 1:n.manifest){
-    manifests[,seq(i,Tpoints*n.manifest,n.manifest)]<-manifests[,seq(i,Tpoints*n.manifest,n.manifest),drop=FALSE]+
-      rnorm(Tpoints*n.subjects,0,sqrt(MANIFESTVAR[i,i]))+ #measurement residual
-      MANIFESTMEANS[i]+rep(mantraiteffect[,i],Tpoints)
-  }
+    manifests[,((i-1)*n.manifest+1):(i*n.manifest)] <- latents[,((i-1)*n.latent+1):(i*n.latent)] %*% t(LAMBDA) + 
+      MASS::mvrnorm(n.subjects,mu=MANIFESTMEANS,Sigma=MANIFESTVAR) + # manifest means and error variance
+      manifesttraiteffects + # manifest traits
+      traiteffect #latent traits
+  }  
+
   
   intervals<-matrix(dT,nrow=n.subjects,ncol=(Tpoints-1)) #add intervals to latent output
   out<-as.matrix(cbind(manifests,TDpreds,intervals,TIpreds)) #output variables

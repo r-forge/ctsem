@@ -18,22 +18,13 @@
 #' @param confidenceintervals Character vector of parameter labels to estimate confidence intervals for.  
 #' Unlike with \code{\link{ctFit}}, entire matrices cannot be specified.
 #' @param showInits Displays start values prior to optimization
-#' @param fitasgroup If FALSE, OpenMx models for each group are fit individually and output in a list.  
-#' By default, groups are specified and fit as sub-models of a single large OpenMx model.
-#' @param plots Only relevant if fitasgroup=FALSE.  If TRUE, plots each model fit 
-#' with mean trajectory, autoregression and cross regression plots.
-#' @param summaries Same as plots but for summary output.
 #' @param carefulFit if TRUE, first fits the specified model with a penalised likelihood function 
-#' to force MANIFESTVAR, DRIFT, TRAITVAR, MANIFESTTRAITVAR parameters to remain close to 0, then
+#' to encourage parameters to remain closer to 0, then
 #' fits the specified model normally, using these estimates as starting values. 
-#' Can help with optimization, though results in user specified inits being ignored for the final fit.
-#' @param freemodelvarlimits Experimental
-#' @param varzeroweight Experimental
+#' Can help with optimization in some cases, though results in user specified inits being ignored for the final fit.
 #' @param retryattempts Number of fit retries to make.
-#' @param plotOptimization plots graphs of optimization progress after fitting, uses OpenMx checkpointing.
 #' @param ... additional arguments to pass to \code{\link{ctFit}}.
-#' @return Returns either an OpenMx fit object (if fitasgroup=TRUE), or a list containing 
-#' individual ctsem fit objects.
+#' @return Returns an OpenMx fit object.
 #' @details Additional \code{\link{ctFit}} parameters may be specified as required.
 #' 
 #' @examples 
@@ -72,12 +63,9 @@
 
 
 ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=NA,
-  freemodelvarlimits=NA,varzeroweight=0,fitasgroup=TRUE, carefulFit=FALSE,
-  retryattempts=5,showInits=TRUE,confidenceintervals=NULL,
-  plots=FALSE,summaries=FALSE,plotOptimization=FALSE,...){
+ carefulFit=FALSE,
+  retryattempts=5,showInits=TRUE,confidenceintervals=NULL,...){
 
-  checkOpenMx('ctFit')
-  
   if(any(suppressWarnings(!is.na(as.numeric(groupings))))) stop("grouping variable must not contain purely numeric items")
   if(length(groupings)!= nrow(datawide)) stop('length of groupings does not equal number of rows of datawide')
   
@@ -93,7 +81,6 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
     singlegroup<-datawide[which(groupings == i),,drop=F] #data for the group
     
     singlectspec<-ctmodelobj
-    varparams<-c() #blank placeholder for adding any variance constrained free parameters
     
     if(all(is.na(freemodel))) freemodel <- lapply(ctmodelobj,function(x) { x<-rep('groupfree',length(x))}) #if no freemodel specified then free all params at this point
     
@@ -103,13 +90,8 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
         if(freemodel[[m]][j]=="groupfree"){ #if the slot is free in freemodel and not fixed in fixedmodel
         jnum<-suppressWarnings(as.numeric(ctmodelobj[[m]][j])) #check if it is numeric
         if(!is.na(ctmodelobj[[m]][j]) && is.na(jnum)) { #if the slot is neither NA or fixed to a value, then
-          singlectspec[[m]][j] <- paste0(i,ctmodelobj[[m]][j]) #give the label a group specific prefix
+          singlectspec[[m]][j] <- paste0(i,'_',ctmodelobj[[m]][j]) #give the label a group specific prefix
           
-#           if(!is.na(suppressWarnings(as.numeric(freemodelvarlimits[[m]][j])))) { #if there are variance limits imposed on this free param
-#             newvarparam<-
-#             
-#             varparams<-cbind(varparams,     
-#           }
           
         }
       }
@@ -140,175 +122,306 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
     
     omxmodel<- OpenMx::mxRename(omxmodel, newname=i) #change name of omxmodel for group i
       
-    
-    if(fitasgroup==TRUE) omxmodels[[i]]<-omxmodel #if fitting single multigroup model, add omxmodel for group i to list of omxmodels for all groups
-    
-    if(fitasgroup==FALSE) { #if fitting groups seperately
-    omxfit<-ctFit(singlegroup,singlectspec,...) #generate omxfit for group i
-      omxmodels[[i]]<-omxfit #add to list of outputs
-      if(plots==TRUE) plot(omxfit,wait=F)
-      if(summaries==TRUE) print(summary(omxfit))
-      
-    }
+  omxmodels[[i]]<-omxmodel #if fitting single multigroup model, add omxmodel for group i to list of omxmodels for all groups
     
   } #end loop over groups
   
   
   
-  if(fitasgroup==TRUE) {
     
-
-    if(any(!is.na(freemodelvarlimits))){ #extracts global parameter names for params with variance limits
-   
-      varparglobalnames <- suppressWarnings(unlist(ctmodelobj)[unlist(freemodel)=='groupfree' & 
-         unlist(fixedmodel)!='groupfixed' &  
-          !is.na(suppressWarnings(as.numeric(unlist(freemodelvarlimits))))])
-      varparglobalnames<-varparglobalnames[duplicated(varparglobalnames)==FALSE]
-
-       varpargroupnames<-suppressWarnings(matrix(c(  #extracts group specific parameter names for params with variance limits
-         paste0(rep(groupings, times=length(varparglobalnames)),
-           rep(varparglobalnames,each=length(unique(groupings))))
-       ),ncol=length(varparglobalnames)))
-      
-
-      L3varlabels<- matrix(paste0(  #setup labels for var/cov matrix of parameters with constrained variance
-        'L3var_',
-        varparglobalnames,
-        '_X_',
-        rep(varparglobalnames,each=length(varparglobalnames))), 
-        nrow=length(varparglobalnames),
-        ncol=length(varparglobalnames))
-      
-      L3varlabels[upper.tri(L3varlabels)]<-t(L3varlabels)[upper.tri(L3varlabels)]
-      
-#       test<-test1
-#       test[upper.tri(test)]<-t(test)[upper.tri(test)]
-      
-      
-      
-      level3model<-OpenMx::mxModel('L3VarianceModel',
-        
-        mxMatrix(name='L3VarianceParameters',
-          nrow=nrow(varpargroupnames), ncol=length(varparglobalnames),
-          labels=varpargroupnames, free=TRUE),
-        
-#         mxMatrix( type="Symm", nrow=length(varparglobalnames), 
-#           ncol=length(varparglobalnames),
-#           labels=L3varlabels,
-#           values=diag(.9,length(varparglobalnames)),
-#           free=TRUE, name="expCov" ),
-        
-#         mxMatrix(name="expMean", nrow=1, ncol=length(varparglobalnames), free=TRUE, 
-#           labels=paste0('L3mean_',varparglobalnames)),
-        
-#         mxMatrix(type='Full',values=length(varparglobalnames), #should this be number of variances or number of both var / cov?
-#           ncol=1,nrow=1,free=F,name='L3variablecount'),
-#         
-        mxMatrix(type='Full',values=length(unique(groupings)), #should this be number of variances or number of both var / cov?
-          ncol=1,nrow=1,free=F,name='groupcount'),
-      
-#         mxMatrix("Full", 1, 1, values = log(2*pi), name = "log2pi"),
-        #                           mxAlgebra(
-        #                             expression=log2pi %*% 2 + log(det(expCov) + driftvar - expMean) %&% solve(expCov),
-        #                             name ="llvector",
-        #                           ),
-        
-        
-        
-#         mxAlgebra(expression=  1/2 * ( log(det(expCov)) + tr(S %*% solve(expCov)) - log(det(S))  ) + # -(varcount)
-#             1/2 * ( t(m - expMean) %*% solve(expCov) %*% (m-expMean)  ),  name ="llvector"),
-          
-#         mxAlgebra(  name ="llvector", expression= sum( (expCov - S ) * (expCov - S ) ) +  #working but slow
-#             sum( (m-expMean) * (m-expMean) )),
-        
-#         
-#         mxAlgebra(  name ="llvector", expression= (groupcount-1) %*% 
-#             (log(det(expCov)) - log(det(S)) + tr(S %*% solve(expCov)) - L3variablecount +
-#                 (groupcount / (groupcount - 1)) %*% (m - expMean) %*% solve(expCov) %*% t(m - expMean) +1) ),
-        
-#         mxMatrix(name='llvector',nrow=1,ncol=2,values=.3,free=F),
-        
-        
-          #                             expression=  -2 * (  (-20/2) * log(2*pi) - (20/2) *(log(expCov^2)) - (1/(2*expCov^2)) * sum(driftvar - expMean)^2   ),
-          #                             expression = (-varcount / 2) * log(2*pi) - varcount/2*log(det(expCov)) - 
-          #                               (1/2)*sum(  t(driftvar - expMean) %*% solve(expCov) %*% (driftvar - expMean)
-          
-        
-        
-        
-        mxMatrix(name='sumMatrix',values=1,free=F,nrow=1,ncol=length(unique(groupings))),
-        
-#        
-#         l3VarParDeviance <- 
-#           mxEval(L3VarianceParameters - bigMeans, fullmodel$submodels$L3VarianceModel,compute=T)
-        
-        mxAlgebra(name='m', sumMatrix %*% (L3VarianceParameters) %x% (1/groupcount),dimnames=list(NULL,varparglobalnames)), #observed means vector
-        mxMatrix(name='bigMeans',
-          labels=paste0(
-          'm[1,',
-          rep(1:length(varparglobalnames), each= length(unique(groupings))),
-          ']'),
-          ncol=length(varparglobalnames),
-          nrow=length(unique(groupings))),
-        
-        mxAlgebra(name='L3VarParDeviance', L3VarianceParameters - bigMeans),
-        mxAlgebra(name='S',t(L3VarParDeviance) %*% L3VarParDeviance,dimnames=list(varparglobalnames,varparglobalnames)), #observed covariance matrix
-        mxMatrix(name='varzeroweight',values=varzeroweight, nrow=1, ncol=1),
-#         mxAlgebra((sum(llvector)+sum(expCov * expCov)) %x% varzeroweight, name='fitAlgebra'),
-        mxAlgebra(sum(tr(S) * tr(S)) * varzeroweight, name='fitAlgebra'),
-        mxFitFunctionAlgebra('fitAlgebra')
-        
-      )      #end L3 model spec
-      
-      fullmodel <- OpenMx::mxModel('ctsemMultigroup', #output multigroup omxmodel
-        mxFitFunctionMultigroup(c(paste0(unique(groupings)),'L3VarianceModel.fitfunction')),
-        omxmodels, level3model)
-    }  #end variance constraint section
-    
-    
-    if(all(is.na(freemodelvarlimits))) fullmodel <- OpenMx::mxModel('ctsem multigroup', #output multigroup omxmodel
+    fullmodel <- OpenMx::mxModel('ctsem multigroup', #output multigroup omxmodel
       mxFitFunctionMultigroup(c(paste0(unique(groupings)))),
+#       mxComputeSequence(list(
+#         mxComputeGradientDescent(gradientAlgo="central", nudgeZeroStarts=FALSE, 
+#           maxMajorIter=1000, gradientIterations = 1),
+        mxComputeReportDeriv(),
       omxmodels)
     
-    if(carefulFit==TRUE) fullmodel<-OpenMx::omxSetParameters(fullmodel,labels=names(startparams),values=startparams)
+
+    hyperpars<-NULL
+    if(!is.null(hyperpars)){ 
+      
+            params<-OpenMx::omxLocateParameters(fullmodel) #get list of parameters from base model
+            
+            baseparamindices<-grep(paste0(groupings[1],'_'),params$label) #get base parameters by removing group 1 id from any params with group 1 id
+            baseparams <- params$value[baseparamindices]
+            names(baseparams) <- gsub(paste0(groupings[1],'_'),'',params$label[baseparamindices])
+            baseparams<-baseparams[!duplicated(baseparams)]
+            
+            meanParams<-lapply(1:nrow(datawide),function(x) {
+              basemodel<-omxmodels[[x]]
+              OpenMx::omxGetParameters(basemodel)[paste0(groupings[x],'_',names(baseparams)) %in% names(OpenMx::omxGetParameters(basemodel))]
+            })
+            meanParams<-colMeans(matrix(unlist(meanParams),ncol=length(meanParams[[1]])))
+      
+      penalisedmodels<-lapply(1:nrow(datawide), function(x) {
+        
+        basemodel<-omxmodels[[x]]
+        indParams<-OpenMx::omxGetParameters(basemodel)[paste0(groupings[x],'_',names(baseparams)) %in% names(OpenMx::omxGetParameters(basemodel))]
+        
+        algstring<-paste0("mxAlgebra(name='algFit', ",groupings[x],".objective + sum(
+          (indParams - meanParams) * (indParams - meanParams) * hyperpars * hyperpars))")
+        fitAlg<-eval(parse(text=algstring))
+        
+        penalisedmodel<-OpenMx::mxModel(paste0('penalised_',groupings[x]), 
+          
+          basemodel,
+          
+          mxMatrix(name='meanParams', 
+            values=meanParams, 
+            labels=paste0('mean_',names(baseparams)),
+            free=T,nrow=1,ncol=length(meanParams)),
+          
+          mxMatrix(name='hyperpars',
+            values=hyperpars,
+            labels=paste0('penalty_',names(baseparams)),
+            free=F, nrow=1, ncol=length(meanParams)),
+          
+          mxMatrix(name='indParams', 
+            labels=names(indParams), #paste0(groupings[x],'_',names(meanParams)),
+            values=indParams,
+            free=T,nrow=1,ncol=length(meanParams)),
+          
+          fitAlg,
+          
+          mxFitFunctionAlgebra('algFit')
+        )
+      })
+      
+      fullmodel<-OpenMx::mxModel('multigroup_ctsem',
+        penalisedmodels,
+        
+        mxMatrix(name='meanParams', 
+          values=meanParams, 
+          labels=paste0('mean_',names(baseparams)),
+          free=T,nrow=1,ncol=length(baseparams)),
+        
+        mxMatrix(name='hyperpars',
+          values=hyperpars,
+          labels=paste0('penalty_',names(baseparams)),
+          free=F, nrow=1, ncol=length(baseparams)),
+        
+        mxFitFunctionMultigroup(paste0('penalised_',groupings)))
+    }
     
+    ###old approach to hypervars
+#     if(!is.null(hyperpars)){ #extracts global parameter names for params with variance limits
+#       params<-omxLocateParameters(fullmodel) #get list of parameters from base model
+#       
+#       baseparamindices<-grep(paste0(groupings[1],'_'),params$label) #get base parameters by removing group 1 id from any params with group 1 id
+#       baseparams <- params$value[baseparamindices]
+#       names(baseparams) <- gsub(paste0(groupings[1],'_'),'',params$label[baseparamindices])
+#       baseparams<-baseparams[!duplicated(baseparams)]
+# 
+#       indparams<-c()
+#       for(i in 1:length(baseparams)){ #get individual parameter labels
+#         tempparams<-params [grep( #param list where
+#           names(baseparams)[i], #main param string i is found
+#           params$label),] #in param labels
+#         sub1<-gsub('^[[:alpha:]]','',tempparams$label)
+#         sub2<-as.numeric(gsub( '[_](.*)' ,'', sub1))
+#         indparams<-rbind(indparams,tempparams[order(sub2),])
+#       }
+# 
+#       indparamlabels<-list()
+#       for(i in 1:length(baseparams)){ #get individual parameter labels
+#         templabels<-indparams$label [grep( #param list where
+#           names(baseparams)[i], #main param string i is found
+#           indparams$label)] #in param labels
+#         
+#         templabels<-templabels[!duplicated(templabels)]
+# 
+#         sub1<-gsub('^[[:alpha:]]','',templabels)
+#         sub2<-as.numeric(gsub( '[_](.*)' ,'', sub1))
+#         indparamlabels[[i]]<-templabels[order(sub2)]
+#         
+#       }
+#       indparamlabels<-matrix(unlist(indparamlabels),nrow=length(unique(groupings)),ncol=length(baseparams))
+#       
+#       indparamvalues<-list()
+#       for(i in 1:length(baseparams)){ #get individual parameter labels
+#         tempvalues<-indparams$value [grep( #param list where
+#           names(baseparams)[i], #main param string i is found
+#           indparams$label)] #in param labels
+#         
+#         tempvalues<-tempvalues[!duplicated(tempvalues)]
+#         
+#         sub1<-gsub('^[[:alpha:]]','',templabels)
+#         sub2<-as.numeric(gsub( '[_](.*)' ,'', sub1))
+#         indparamvalues[[i]]<-tempvalues[order(sub2)]
+#         
+#       }
+#       indparamvalues<-matrix(unlist(indparamvalues),nrow=length(unique(groupings)),ncol=length(baseparams))
+#       
+#       
+#       #for basing parameters off first parameter (to help optimization)
+#       
+# #       indparamswithoutfirst<-indparams[-grep(paste0(groupings[1],'_'),indparams$label),]
+# #       indparamlabelswithoutfirst<-indparamlabels[-1,]
+# #       
+# #       indparammodifiermatrix <- OpenMx::mxMatrix(name='indparammodifiermatrix', 
+# #         free=c(FALSE, rep(TRUE,length(unique(groupings))-1)),
+# #         nrow=length(unique(groupings)), 
+# #         values=c(0,rnorm(length(unique(groupings))-1,0,.01)),
+# #         ncol=length(hyperpars),
+# #         labels=rbind(NA,indparamlabelswithoutfirst))
+# #       
+# #       indfirstparammatrix<-OpenMx::mxMatrix(name='indfirstparammatrix', 
+# #         free=TRUE,
+# #         nrow=length(unique(groupings)),
+# #         values=rep(indparams$value[which(indparams$label %in% rep(indparamlabels[1,],each=length(unique(groupings))))],
+# #           ,each=length(unique(groupings))),
+# #         ncol=length(hyperpars),
+# #         labels=rep(indparamlabels[1,],each=length(unique(groupings))))
+# #       
+# #       indparammodifieralg <- OpenMx::mxAlgebra(name='indparammodifieralg', indfirstparammatrix + indparammodifiermatrix)
+# 
+#   
+#       
+#       
+#       
+#       algstring<-c(paste0(unique(groupings),'.objective',collapse=' + '))
+#       subfits<-eval(substitute(OpenMx::mxAlgebra(theexpression, name='subfits'),list(theexpression=parse(text=algstring)[[1]])))
+# 
+# 
+#       fullmodel<-OpenMx::mxModel('hypervar',
+# #         indparammodifiermatrix,
+# #         indfirstparammatrix,
+# #         indparammodifieralg,
+# #         
+#         mxMatrix(name='nparameters', 
+#           ncol=1,
+#           nrow=1,
+#           values=length(baseparams), 
+#           free=F),
+#         
+#         mxMatrix(type='Full',
+#           values=length(unique(groupings)), 
+#           ncol=1,
+#           nrow=1,
+#           free=F,
+#           name='groupcount'),
+# 
+#         mxMatrix(name='sumMatrix',
+#           values=1,
+#           free=F,
+#           nrow=1,
+#           ncol=length(unique(groupings))),
+#         
+#         mxAlgebra(name='m', sumMatrix %*% (indParameters) %x% (1/groupcount),dimnames=list(NULL,names(baseparams))), #observed means vector
+#         
+#         mxMatrix(name='bigMeans',
+#           labels=paste0(
+#           'm[1,',
+#           rep(1:length(baseparams), each= length(unique(groupings))),
+#           ']'),
+#           ncol=length(baseparams),
+#           nrow=length(unique(groupings))),
+#         
+#         mxAlgebra(name='indparamDeviance', indParameters - bigMeans),
+#         mxAlgebra(name='S',t(indparamDeviance) %*% indparamDeviance,dimnames=list(names(baseparams),names(baseparams))), #observed covariance matrix
+# 
+#         mxAlgebra(subfits + tr(abs (vec2diag(diag2vec(S)) * (vec2diag(hyperpars * hyperpars))) ), name='fitAlgebra'),
+#         
+#         subfits,
+#         
+#         omxmodels,
+#         
+#         mxMatrix(name='hyperpars', 
+#           values=hyperpars, 
+#           labels=names(hyperpars),
+#           nrow=1,
+#           ncol=length(hyperpars),
+#           free=FALSE),
+# 
+#         mxFitFunctionAlgebra('fitAlgebra')
+#         
+#       )      #end L3 model spec
+#       
+# #       tm<-indparamswithoutfirst #adjust parameter matrices to reference algebra modifier
+# #       for(i in 1:length(indparamswithoutfirst$label)){
+# #         fullmodel[[ tm[i,'model'] ]] [[  tm[i,'matrix'] ]]$labels[tm[i,'row'], tm[i,'col'] ] <-
+# #           paste0('hypervar.indparammodifieralg[', which(indparammodifiermatrix$labels == tm[i,'label'], arr.ind=TRUE)[1], 
+# #             ',',
+# #             which(indparammodifiermatrix$labels == tm[i,'label'], arr.ind=TRUE)[2],
+# #             ']')
+# #         
+# #         fullmodel[[ tm[i,'model'] ]] [[  tm[i,'matrix'] ]]$free[tm[i,'row'], tm[i,'col'] ] <- FALSE
+# #         fullmodel[[ tm[i,'model'] ]] [[  tm[i,'matrix'] ]]$values[tm[i,'row'], tm[i,'col'] ] <- rnorm(1,0,.01)
+# #       }
+# 
+#       fullmodel<-mxModel(fullmodel, 
+#         mxMatrix(name='indParameters',
+#         nrow=nrow(indparamlabels), 
+#           ncol=length(baseparams),
+#           # values=rep(baseparams,each=length(unique(groupings))) + rnorm(length(unique(groupings))*length(hyperpars),0,.00),
+#           values=indparamvalues,
+#         labels=indparamlabels, 
+#           free=TRUE))
+#       
+#       # fullmodel<-omxSetParameters(fullmodel,values=params,labels=names(params))
+#       
+#       
+# 
+# #       ####reparameterise in terms of deviations from first individual parameter
+# # 
+# #       indparammodifiers<-list()
+# #       meanparammatrix<-list()
+# #       for(i in 1:length(baseparams)){
+# #         #these replace the original individual param labels, to reference the individual param algebra
+# #         indparammodifierrefs<- paste0('hypervar.indparammodifieralg','[', 1:(length(unique(groupings))),',',i, ']')
+# # 
+# #         modifyindex<- grep(names(baseparams)[i],indparams$label,perl=T) #for every line related to the base param 
+# #         for(x in 1:length(modifyindex)){  
+# #           fullmodel[[indparams$model[modifyindex[x]]]][[indparams$matrix[modifyindex[x]]]]$labels[indparams$row[modifyindex[x]],indparams$col[modifyindex[x]]] <- #the related part of the model
+# #             indparammodifierrefs[x] #is replaced by the relevent indparammodifierref
+# #           fullmodel[[indparams$model[modifyindex[x]]]][[indparams$matrix[modifyindex[x]]]]$free[indparams$row[modifyindex[x]],indparams$col[modifyindex[x]]] <- #the related part of the model
+# #             FALSE #is set to fixed
+# #         }
+# #       }
+# # 
+# # #this is a matrix of deviations from first individual param
+# # indparammodifiers<-mxMatrix(name=paste0('indparammodifiers'),
+# #   labels=unlist(indparamlabels),
+# #   free=TRUE,
+# #   values=rep(baseparams,each=length(unique(groupings))) + rnorm(length(unique(groupings))*length(hyperpars),0,.01),
+# #     nrow=length(unique(groupings)),
+# #   ncol=length(hyperpars))      
+# # 
+# #       meanparammatrix<-mxMatrix(name=paste0('meanparammatrix'),
+# #         labels=rep(names(baseparams),each=length(unique(groupings))),
+# #         nrow=length(unique(groupings)),
+# #         ncol=length(hyperpars),
+# #         values=rep(baseparams,each=length(unique(groupings))), 
+# #         free=TRUE)
+# #         
+# #       theexpression<-paste0('meanparammatrix + indparammodifiers')
+# #       #This algebra adds first individual param to every individual param modifier
+# #       indparammodifieralg<- eval(substitute(mxAlgebra(name=paste0('indparammodifieralg'), 
+# #         expression=theexpression),
+# #         list(theexpression=parse(text=theexpression)[[1]])))
+# #       
+# #       
+# #       fullmodel<-mxModel(fullmodel,indparammodifieralg,indparammodifiers, meanparammatrix)
+#       
+      
+      
+      
+      
+      
+    # }  #end variance constraint section
+
+
     fullmodel<-OpenMx::omxAssignFirstParameters(fullmodel)
 
     if(!is.null(confidenceintervals)) fullmodel <- OpenMx::mxModel(fullmodel, mxCI(confidenceintervals,interval = 0.95,type = "both")) #if 95% confidence intervals are to be calculated
 
-    if(plotOptimization==T){
-
-      fullmodel<- OpenMx::mxOption(fullmodel,'Always Checkpoint', 'Yes')
-      fullmodel<- OpenMx::mxOption(fullmodel,'Checkpoint Units', 'iterations')
-      fullmodel<- OpenMx::mxOption(fullmodel,'Checkpoint Count', 1)    
-    }
-    
-    multiout<-ctmxTryHard(fullmodel,
+      fullmodel<-OpenMx::mxTryHard(fullmodel,initialTolerance=1e-18,
       showInits=showInits,
-      #         intervals = ifelse(!is.null(confidenceintervals),TRUE,FALSE),
-#       confidenceintervals=confidenceintervals,
       bestInitsOutput=FALSE,
-      extraTries=retryattempts,loc=1,scale=.2,paste=FALSE,iterationSummary=TRUE) 
+      extraTries=retryattempts,loc=1,scale=.2,paste=FALSE,iterationSummary=TRUE,...) 
     
-    
-    if(plotOptimization==TRUE){
-      
-      checkpoints<-read.table(file='ctsemMultigroup.omx',header=T,sep='\t')
-      mfrow<-par()$mfrow
-      par(mfrow=c(3,3))
-      for(i in 6:ncol(checkpoints)) {
-        plot(checkpoints[,i],main=colnames(checkpoints)[i])
-      }
-      par(mfrow=mfrow)
-      deleteCheckpoints <- readline('Remove created checkpoint file, ctsemMultigroup.omx? y/n \n')
-      if(deleteCheckpoints) file.remove(file='ctsemMultigroup.omx')
-    }
-    
-    
-    return(multiout)
-  }
-  
-  if(fitasgroup==FALSE) return(omxmodels)
+    return(fullmodel)
   
 }
 

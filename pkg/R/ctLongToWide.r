@@ -39,16 +39,15 @@ ctLongToWide <- function(datalong, id, time, manifestNames, TDpredNames=NULL, TI
     "time",
     TIpredNames)
   
-  data_long<-cbind(data_long,1) #add discrete time point column  
-  colnames(data_long)[ncol(data_long)]<-"discrete.time.point"
-  
+  discrete.time.point<-rep(1,nrow(data_long))
+
   for(i in 2:nrow(data_long)){ #number discrete time points
     if(data_long[i,"id"]==data_long[(i-1),"id"]) {
-      data_long[i,"discrete.time.point"] <- sum(data_long[(i-1):i,"discrete.time.point"])
+      discrete.time.point[i] <- discrete.time.point[i-1] + 1
     }
   }
   
-  
+  data_long<-cbind(data_long,discrete.time.point) #add discrete time point column  
   
   
   manifestNames_wide<-reshape(data_long,  #create wide format manifestNames

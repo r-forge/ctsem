@@ -1,8 +1,8 @@
 Package: ctsem
 Type: Package
 Title: Continuous Time Structural Equation Modelling
-Version: 1.0
-Date: 2015-04-03
+Version: 1.1
+Date: 2015-07-017
 Authors@R: c(person("Manuel", "Voelkle", role = c("aut","cph"), comment =
     "Original development of continuous time model specification within OpenMx,
     advisor for further development"),person("Han", "Oud", role =
@@ -11,10 +11,9 @@ Authors@R: c(person("Manuel", "Voelkle", role = c("aut","cph"), comment =
     c("aut","cre","cph"), comment = "Further development of continuous time
     model specification within OpenMx, package development, documentation and
     maintenance",email="driver@mpib-berlin.mpg.de"))
-Description: ctsem is an R package for continuous time structural equation
-    modelling.  ctsem interfaces to the the OpenMx package
-    (available from http://openmx.psyc.virginia.edu/), and provides an easily
-    accessible dynamic modelling approach for panel and time series data.  Most
+Description: An easily accessible continuous (and discrete) time dynamic 
+    modelling package for panel and time series data, reliant upon the OpenMx. 
+    package (http://openmx.psyc.virginia.edu/) for computation. Most
     dynamic modelling approaches to longitudinal data rely on the assumption
     that time intervals between observations are consistent.  When this
     assumption is adhered to, the data gathering process is necessarily limited
@@ -25,8 +24,9 @@ Description: ctsem is an R package for continuous time structural equation
     however by explicitly including the length of time between observations,
     continuous time models are freed from the assumption that measurement
     intervals are consistent.  This allows: data to be gathered irregularly;
-    the elimination of noise and bias due to varying measurement intervals.
-    The application of such a model in an SEM framework allows full-information
+    the elimination of noise and bias due to varying measurement intervals; 
+    parsimonious structures for complex dynamics.
+    The application of such a model in this SEM framework allows full-information
     maximum-likelihood estimates for both N = 1 and N > 1 cases, multiple
     measured indicators per latent process, and the flexibility to incorporate
     additional elements, including individual heterogeneity in the latent
@@ -35,13 +35,11 @@ Description: ctsem is an R package for continuous time structural equation
     able to estimate a random effects model where the impact of time dependent
     and time independent predictors can be assessed simultaneously, but without
     the classic problems of random effects models assuming no covariance
-    between unit level effects and predictors.  The flexibility of ctsem may
-    also of course be applicable for modelling of datasets where the
-    observations are regularly spaced.
+    between unit level effects and predictors.  
 License: GPL-3
-Depends: R (>= 3.0.0)
+Depends: R (>= 3.0.0),  OpenMx (>= 2.0)
 URL: http://ctsem.r-forge.r-project.org/
 Imports:  MASS
-Additional_repositories: http://openmx.psyc.virginia.edu/OpenMx2/
 LazyData: Yes
-Suggests: knitr, OpenMx (>= 2.0)
+Suggests: knitr
+VignetteBuilder: knitr
