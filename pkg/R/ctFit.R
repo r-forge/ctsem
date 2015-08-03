@@ -168,7 +168,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     }
   }
   if (length(TIpredNames)) {
-    missingTI <- is.na(match(paste0(TIpredNames, "_T0"), colnames(datawide)))
+    missingTI <- is.na(match(paste0(TIpredNames), colnames(datawide)))
     if (any(missingTI)) {
       stop(paste("Columns for", omxQuotes(TIpredNames[missingTI]),
                  "are missing from the data frame"))
