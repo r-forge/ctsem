@@ -39,6 +39,13 @@ ctLongToWide <- function(datalong, id, time, manifestNames, TDpredNames=NULL, TI
     "time",
     TIpredNames)
   
+  if(any(is.na(data_long[,'time']))){
+    message(paste0('Observations with missing time information found - removing ', sum(is.na(data_long[,'time'])), ' rows'))
+    data_long<-data_long[!is.na(data_long[,'time']),]
+  }
+
+  data_long <- data_long[order(data_long[,'id'],data_long[,'time']),]  # order by id
+
   discrete.time.point<-rep(1,nrow(data_long))
 
   for(i in 2:nrow(data_long)){ #number discrete time points

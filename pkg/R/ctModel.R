@@ -206,11 +206,15 @@ ctModel<-function(n.manifest, n.latent, Tpoints, LAMBDA,
   if(n.TDpred > 0){
     if(all(TDpredNames=='auto')) TDpredNames=paste0('TD',1:n.TDpred)
   if(length(TDpredNames) != n.TDpred) stop("Length of TDpredNames does not equal n.TDpred!") 
+  } else {
+    TDpredNames=c()
   }
   
   if(n.TIpred > 0){
   if(all(TIpredNames=='auto')) TIpredNames=paste0('TI',1:n.TIpred)
   if(length(TIpredNames) != n.TIpred) stop("Length of TIpredNames does not equal n.TIpred!") 
+  } else {
+    TIpredNames=c()
   }
   
   

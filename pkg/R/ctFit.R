@@ -33,7 +33,6 @@ utils::globalVariables(c("invDRIFT","II","DRIFTlog","vec2diag","diag2vec",
 #' or 'mxRAM' for multiple subjects. For single subject data, 'Kalman' uses the \code{mxExpectationStateSpace }
 #' function from OpenMx to implement the Kalman filter. 
 #' For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject.
-#' 'mxFIML' is also an option, equivalent to 'mxRAM' when converged, but faster and more likely to generate errors. 
 #' 'cov' may be specified, in which case the 'meanIntervals' argument is set to TRUE, and the covariance matrix
 #' of the supplied data is calculated and fit instead of the raw data. This is much faster but only a rough approximation,
 #' unless there are no individual differences in time interval and no missing data.
@@ -156,6 +155,26 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   TDpredNames<-ctmodelobj$TDpredNames
   TIpredNames<-ctmodelobj$TIpredNames
   
+  missingManifest <- is.na(match(paste0(manifestNames, "_T0"), colnames(datawide)))
+  if (any(missingManifest)) {
+    stop(paste("Columns for", omxQuotes(manifestNames[missingManifest]),
+               "are missing from the data frame"))
+  }
+  if (length(TDpredNames)) {
+    missingTD <- is.na(match(paste0(TDpredNames, "_T0"), colnames(datawide)))
+    if (any(missingTD)) {
+      stop(paste("Columns for", omxQuotes(TDpredNames[missingTD]),
+                 "are missing from the data frame"))
+    }
+  }
+  if (length(TIpredNames)) {
+    missingTI <- is.na(match(paste0(TIpredNames, "_T0"), colnames(datawide)))
+    if (any(missingTI)) {
+      stop(paste("Columns for", omxQuotes(TIpredNames[missingTI]),
+                 "are missing from the data frame"))
+    }
+  }
+  
   #determine objective based on number of rows
   if(objective=='auto' & nrow(datawide) == 1) objective<-'Kalman'
   if(objective=='auto' & nrow(datawide) > 1 & n.TIpred + n.TDpred ==0 ) objective<-'mxRAM'
@@ -190,7 +209,14 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   ####0 variance predictor fix
   if(n.TDpred>0 & objective != 'Kalman' & objective != 'Kalmanmx'){ #check for 0 variance predictors for random predictors implementation (not needed for Kalman because fixed predictors)
    
-    if(any(diag(var(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))]))==0) & 
+    varCheck<-try(any(diag(cov(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))], 
+      use="pairwise.complete.obs"))==0))
+    if(class(varCheck)=='try-error') {
+      warning('unable to compute covariance matrix for time dependent predictors - unstable estimates may result if any variances are 0')
+      varCheck<-FALSE
+    }
+      
+    if(varCheck==TRUE & 
         all(is.na(suppressWarnings(as.numeric(diag(ctmodelobj$TDPREDVAR))))) ) {
       
       ctmodelobj$TDPREDVAR <- diag(.1,n.TDpred*(Tpoints-1))
@@ -1612,7 +1638,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   if(objective=='cov'){
     
     manifests <- c(paste0(manifestNames,'_T',rep(0:(Tpoints-1),each=n.manifest)), 
-      if(n.TDpred > 0) {paste0(TdpredNames,'_T',rep(0:(Tpoints-2), times=n.TDpred))}, 
+      if(n.TDpred > 0) {paste0(TDpredNames,'_T',rep(0:(Tpoints-2), times=n.TDpred))}, 
       if(n.TIpred > 0) {paste0(TIpredNames) } )
     covData<-cov(datawide[,manifests],use='pairwise.complete.obs')
     
@@ -1659,7 +1685,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
            values = CINT$values, 
            free = CINT$free, nrow=n.latent, ncol=n.subjects, name = "randIntercepts"),
          # mxAlgebra(name='tCINTmatrix',t(CINTmatrix)),
-         mxAlgebra(name='CINTalg',randIntercepts[,data.subject]),
+         mxAlgebra(name='CINTalg',randIntercepts[,data.id]),
          mxMatrix(name='CINT',labels=paste0('CINTalg[',1:n.latent,',1]'),nrow=n.latent,ncol=1,type='Full')
        )
     } #end multi subject kalman

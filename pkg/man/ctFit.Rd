@@ -23,7 +23,6 @@ to calculate 95\% confidence intervals for.  e.g. c("DRIFT", "TRAITVAR").}
 or 'mxRAM' for multiple subjects. For single subject data, 'Kalman' uses the \code{mxExpectationStateSpace }
 function from OpenMx to implement the Kalman filter.
 For more than one subject, 'mxRAM' specifies a wide format SEM with a row of data per subject.
-'mxFIML' is also an option, equivalent to 'mxRAM' when converged, but faster and more likely to generate errors.
 'cov' may be specified, in which case the 'meanIntervals' argument is set to TRUE, and the covariance matrix
 of the supplied data is calculated and fit instead of the raw data. This is much faster but only a rough approximation,
 unless there are no individual differences in time interval and no missing data.
