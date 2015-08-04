@@ -238,7 +238,7 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=300,dT=1,asymptotes=FALSE
   manifesttraiteffects<-MASS::mvrnorm(n.subjects,mu=rep(0,n.manifest),Sigma=MANIFESTTRAITVAR)
 
   for(i in 1:Tpoints){
-    manifests[,((i-1)*n.manifest+1):(i*n.manifest)] <- (latents[,((i-1)*n.latent+1):(i*n.latent)] + traiteffect) %*% t(LAMBDA) + 
+    manifests[,((i-1)*n.manifest+1):(i*n.manifest)] <- (latents[,((i-1)*n.latent+1):(i*n.latent)] + trait) %*% t(LAMBDA) + 
       MASS::mvrnorm(n.subjects,mu=MANIFESTMEANS,Sigma=MANIFESTVAR) + # manifest means and error variance
       manifesttraiteffects # manifest traits
   }  

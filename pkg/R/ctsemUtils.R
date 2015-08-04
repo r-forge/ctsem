@@ -47,8 +47,16 @@ ctWideNames<-function(n.manifest,Tpoints,n.TDpred=0,n.TIpred=0,manifestNames='au
   }
   
   manifestnames<-paste0(manifestNames,"_T",rep(0:(Tpoints-1),each=n.manifest))
-  if(n.TDpred > 0) TDprednames<-paste0(TDpredNames,"_T",rep(0:(Tpoints-2),each=n.TDpred)) else TDprednames<-NULL
-  intervalnames<-paste0("dT",1:(Tpoints-1))
+  if(n.TDpred > 0 && Tpoints > 1) {
+      TDprednames<-paste0(TDpredNames,"_T",rep(0:(Tpoints-2),each=n.TDpred))
+  } else {
+      TDprednames<-NULL
+  }
+  if (Tpoints > 1) {
+      intervalnames<-paste0("dT",1:(Tpoints-1))
+  } else {
+      intervalnames <- NULL
+  }
   if(n.TIpred>0) TIprednames <- paste0(TIpredNames) else TIprednames <- NULL
   return(c(manifestnames,TDprednames,intervalnames,TIprednames))
 }

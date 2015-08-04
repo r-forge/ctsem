@@ -41,7 +41,7 @@
 #'  TDpredNames = "TD1", TIpredNames = c("TI1", "TI2"))
 #'  
 #'  #Then convert the absolute times to intervals, using the Tpoints reported from the prior step.
-#'  wide <- ctIntervalise(datawide = wideexample, Tpoints = 4, n.manifest = 3, 
+#'  wide <- ctIntervalise(datawide = wideexample, Tpoints = 3, n.manifest = 3, 
 #'  n.TDpred = 1, n.TIpred = 2, manifestNames = c("Y1", "Y2", "Y3"), 
 #'  TDpredNames = "TD1", TIpredNames = c("TI1", "TI2") )
 #'  
@@ -89,7 +89,7 @@ ctIntervalise<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0,impute
   if(imputedefs==FALSE) { #set missing variable values to NA
     message("imputedefs==FALSE (default, recommended) so setting observations with no time value to NA")
     
-    for(i in 1:(Tpoints-1)){ #for every time, 
+    if (Tpoints > 1) for(i in 1:(Tpoints-1)){ #for every time, 
       tempwide[which(is.na(tempwide[, timeindex[i]])), #rows that contain missings on time i
         seq(i, #columns that begin with first tdpred at time i 
           n.manifest*Tpoints, #up to last manifest
@@ -111,7 +111,7 @@ ctIntervalise<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0,impute
       timeindex[1]] <-  mininterval  #set first time point data to mininterval ( we can do this now because we've set variable values to NA already)
     
     
-    for(i in 2:(Tpoints)){ #for every time after first
+    if (Tpoints > 1) for(i in 2:(Tpoints)){ #for every time after first
       if(any(is.na(tempwide[,timeindex[i]]))){ #if any timing data at time i is missing,
         tempwide[
           which(is.na(tempwide[,timeindex[i]])),
@@ -226,7 +226,7 @@ ctIntervalise<-function(datawide,Tpoints,n.manifest,n.TDpred=0,n.TIpred=0,impute
   
   
   #adjust absolute times to represent intervals
-  for(i in (Tpoints-1):2) { #for every time obs from the last to the 2nd
+  if (Tpoints > 2) for(i in (Tpoints-1):2) { #for every time obs from the last to the 2nd
     temp[,timeindex[i]] <-  temp[,timeindex[i]] - temp[,timeindex[i-1]] #set the obs to the difference between itself and the next earlier time
   }
   

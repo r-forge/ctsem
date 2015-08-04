@@ -41,5 +41,5 @@ Depends: R (>= 3.0.0),  OpenMx (>= 2.0)
 URL: http://ctsem.r-forge.r-project.org/
 Imports:  MASS
 LazyData: Yes
-Suggests: knitr
+Suggests: knitr, testthat
 VignetteBuilder: knitr

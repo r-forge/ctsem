@@ -209,14 +209,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   ####0 variance predictor fix
   if(n.TDpred>0 & objective != 'Kalman' & objective != 'Kalmanmx'){ #check for 0 variance predictors for random predictors implementation (not needed for Kalman because fixed predictors)
    
-    varCheck<-try(any(diag(cov(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))], 
-      use="pairwise.complete.obs"))==0))
-    if(class(varCheck)=='try-error') {
-      warning('unable to compute covariance matrix for time dependent predictors - unstable estimates may result if any variances are 0')
-      varCheck<-FALSE
-    }
-      
-    if(varCheck==TRUE & 
+    if(any(diag(var(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))]))==0) & 
         all(is.na(suppressWarnings(as.numeric(diag(ctmodelobj$TDPREDVAR))))) ) {
       
       ctmodelobj$TDPREDVAR <- diag(.1,n.TDpred*(Tpoints-1))
@@ -1685,7 +1678,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
            values = CINT$values, 
            free = CINT$free, nrow=n.latent, ncol=n.subjects, name = "randIntercepts"),
          # mxAlgebra(name='tCINTmatrix',t(CINTmatrix)),
-         mxAlgebra(name='CINTalg',randIntercepts[,data.id]),
+         mxAlgebra(name='CINTalg',randIntercepts[,data.subject]),
          mxMatrix(name='CINT',labels=paste0('CINTalg[',1:n.latent,',1]'),nrow=n.latent,ncol=1,type='Full')
        )
     } #end multi subject kalman

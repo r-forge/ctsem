@@ -21,7 +21,7 @@
 #'  TDpredNames = "TD1", TIpredNames = c("TI1", "TI2"))
 #'  
 #'  #Then convert the absolute times to intervals, using the Tpoints reported from the prior step.
-#'  wide <- ctIntervalise(datawide = wideexample, Tpoints = 4, n.manifest = 3, 
+#'  wide <- ctIntervalise(datawide = wideexample, Tpoints = 3, n.manifest = 3, 
 #'  n.TDpred = 1, n.TIpred = 2, manifestNames = c("Y1", "Y2", "Y3"), 
 #'  TDpredNames = "TD1", TIpredNames = c("TI1", "TI2") )
 #'  @export
@@ -85,7 +85,7 @@ ctLongToWide <- function(datalong, id, time, manifestNames, TDpredNames=NULL, TI
         direction = "wide",
         drop=c(manifestNames,TDpredNames[-i],"time",TIpredNames)) [,-1]
       
-      if(is.list(predi)) predi<-as.matrix(predi,nrow=1) #because reshape outputs lists when only one row!
+      if(!is.data.frame(predi)) predi<-as.matrix(predi,nrow=1)
       colnames(predi) <- paste0(TDpredNames,'_T',0:(ncol(predi)-1))
       
       if(any(!is.na(predi[,ncol(predi)]))) { #check for non empty final column of TD predictors
