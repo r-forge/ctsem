@@ -985,11 +985,12 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   }
   
   discreteDRIFTHATCHalgs <- list()
+  if(discreteTime==FALSE && asymptotes==FALSE){
   for(i in 1:(Tpoints - 1)){
-    if(discreteTime==FALSE && asymptotes==FALSE) fullAlgString <- paste0("omxExponential(DRIFTHATCH %x% ", defcall[i], ")")
-    
+     fullAlgString <- paste0("omxExponential(DRIFTHATCH %x% ", defcall[i], ")")
     discreteDRIFTHATCHalgs[i] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFTHATCH_T", i)), 
       list(theExpression = parse(text = fullAlgString)[[1]])))
+  }
   }
   
   INTalgs <- list()
