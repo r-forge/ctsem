@@ -113,6 +113,7 @@ utils::globalVariables(c("invDRIFT","II","DRIFTlog","vec2diag","diag2vec",
 #' fit <- ctFit(data = ctExample3, ctmodelobj = model, objective = 'Kalman', 
 #'   stationary = c('T0VAR'))
 #' 
+#' \dontrun{
 #' ###Oscillating model from Voelkle & Oud (2013). 
 #' data(Oscillating)
 #' inits <- c(-38,-.5,1,10,10)
@@ -126,7 +127,7 @@ utils::globalVariables(c("invDRIFT","II","DRIFTlog","vec2diag","diag2vec",
 #'  startValues = inits)
 #' oscillatingf<-ctFit(Oscillating, oscillatingm, optimizer='SLSQP')
 #' summary(oscillatingf)
-#' 
+#' }
 #' @export
 
 ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL, 

@@ -24,7 +24,6 @@
 #'   manifestNames=c('LeisureTime', 'Happiness'), 
 #'   latentNames=c('LeisureTime', 'Happiness'), TRAITVAR="auto")
 #' traitfit <- ctFit(datawide=ctExample1, ctmodelobj=traitmodel)
-#' summary(traitfit)
 #' plot(traitfit)
 #' @export
 

@@ -120,6 +120,7 @@ model <- ctModel(n.latent = 1, n.manifest = 3, Tpoints = 100,
 fit <- ctFit(data = ctExample3, ctmodelobj = model, objective = 'Kalman',
   stationary = c('T0VAR'))
 
+\dontrun{
 ###Oscillating model from Voelkle & Oud (2013).
 data(Oscillating)
 inits <- c(-38,-.5,1,10,10)
@@ -133,5 +134,6 @@ oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11,
  startValues = inits)
 oscillatingf<-ctFit(Oscillating, oscillatingm, optimizer='SLSQP')
 summary(oscillatingf)
+}
 }
 
