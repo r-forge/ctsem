@@ -18,7 +18,7 @@ utils::globalVariables(c("invDRIFT","II","DRIFTlog","vec2diag","diag2vec",
   "n.latent","DIFFUSION","TRAITVAR","n.TDpred","TDPREDEFFECT","TDPREDMEANS",
   "TDPREDVAR","TRAITTDPREDCOV","n.TIpred","TIPREDEFFECT","TIPREDMEANS",
   "TIPREDVAR","CINT","n.manifest","LAMBDA","MANIFESTMEANS","MANIFESTVAR",
-  "mxFitFunctionMultigroup"))
+  "mxFitFunctionMultigroup", "asymDIFFUSION", 'data.id'))
 
 #' Fit a ctsem object
 #' 
@@ -102,16 +102,16 @@ utils::globalVariables(c("invDRIFT","II","DRIFTlog","vec2diag","diag2vec",
 #' Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL) 
 #' AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel)
 #' summary(AnomAuthfit)
-#' plot(AnomAuthfit, wait=FALSE)
 #' 
 #' 
 #' ### Single subject time series - using Kalman filter (OpenMx statespace expectation)
 #' data('ctExample3')
 #' model <- ctModel(n.latent = 1, n.manifest = 3, Tpoints = 100, 
-#'  LAMBDA = matrix(c(1, 'lambda2', 'lambda3'), nrow = 3, ncol = 1), 
-#'  MANIFESTMEANS = matrix(c(0, 'manifestmean2', 'manifestmean3'), nrow = 3, 
-#'    ncol = 1), T0VAR = diag(1))
-#' fit <- ctFit(data = ctExample3, ctmodelobj = model)
+#'   LAMBDA = matrix(c(1, 'lambda2', 'lambda3'), nrow = 3, ncol = 1), 
+#'   MANIFESTMEANS = matrix(c(0, 'manifestmean2', 'manifestmean3'), nrow = 3, 
+#'     ncol = 1))
+#' fit <- ctFit(data = ctExample3, ctmodelobj = model, objective = 'Kalman', 
+#'   stationary = c('T0VAR'))
 #' 
 #' ###Oscillating model from Voelkle & Oud (2013). 
 #' data(Oscillating)
@@ -126,7 +126,6 @@ utils::globalVariables(c("invDRIFT","II","DRIFTlog","vec2diag","diag2vec",
 #'  startValues = inits)
 #' oscillatingf<-ctFit(Oscillating, oscillatingm, optimizer='SLSQP')
 #' summary(oscillatingf)
-#' plot(oscillatingf, wait=FALSE)
 #' 
 #' @export
 
@@ -209,7 +208,14 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   ####0 variance predictor fix
   if(n.TDpred>0 & objective != 'Kalman' & objective != 'Kalmanmx'){ #check for 0 variance predictors for random predictors implementation (not needed for Kalman because fixed predictors)
    
-    if(any(diag(var(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))]))==0) & 
+    varCheck<-try(any(diag(cov(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))], 
+      use="pairwise.complete.obs"))==0))
+    if(class(varCheck)=='try-error') {
+      warning('unable to compute covariance matrix for time dependent predictors - unstable estimates may result if any variances are 0')
+      varCheck<-FALSE
+    }
+      
+    if(varCheck==TRUE & 
         all(is.na(suppressWarnings(as.numeric(diag(ctmodelobj$TDPREDVAR))))) ) {
       
       ctmodelobj$TDPREDVAR <- diag(.1,n.TDpred*(Tpoints-1))
@@ -229,8 +235,9 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   
   
   ### check single subject model adequately constrained and warn
+
   if(nrow(datawide)==1 & 'T0VAR' %in% stationary ==FALSE & 'T0MEANS' %in% stationary == FALSE & 
-      all(is.na(suppressWarnings(as.numeric(ctmodelobj$T0VAR)))) & 
+      all(is.na(suppressWarnings(as.numeric(ctmodelobj$T0VAR[lower.tri(ctmodelobj$T0VAR,diag=T)])))) & 
       all(is.na(suppressWarnings(as.numeric(ctmodelobj$T0MEANS)))) & nofit==FALSE) stop('Cannot estimate model for single individuals unless either 
         T0VAR or T0MEANS matrices are fixed, or set to stationary')
   
@@ -303,23 +310,6 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   }
   
   
-  #function to remove FFF's from value matrices and coerce to numeric (FFF originally added to label to specify fixed value)
-  removeF <- function(matrices){
-    
-    for(i in 1:length(matrices)){
-      x <-get(matrices[i])
-      x$values<-matrix(as.numeric(gsub("FFF", "", x$values)), nrow = nrow(x$values))
-      assign(matrices[i], x, pos = sys.frame( - 1))
-    }
-  }
-  
-  
-  
-  
-  
-  
-  
-  
   ####section to define continuous time matrices from ctModel input
 #   transformParameters<-function(ctmodelobj){
 # 
@@ -366,7 +356,6 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   
   #function to process ctModel specification:  seperate labels and values, fixed and free, and generate start values
   processInputMatrix <- function(x, symmetric = FALSE, diagadd = 0, randomscale=0.01, addvalues=FALSE, chol=FALSE){
-    name<-names(x)
     
     inputm<-x[[1]]
     inputmFixed <- suppressWarnings(matrix(as.numeric(inputm), nrow = nrow(inputm), ncol = ncol(inputm))) #calc fixed only matrix  
@@ -377,7 +366,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     inputmCharacter <- inputm    
     inputmCharacter[!is.na(inputmFixed)] <- NA #extract free label matrix
     inputmCharacter[!is.na(inputmStarts)] <- NA
-    labels <- ctLabel(TDpredNames=TDpredNames, TIpredNames=TIpredNames, manifestNames=manifestNames, latentNames=latentNames, matrixname=name, n.latent=n.latent, 
+    labels <- ctLabel(TDpredNames=TDpredNames, TIpredNames=TIpredNames, manifestNames=manifestNames, latentNames=latentNames, matrixname=names(x), n.latent=n.latent, 
       n.manifest=n.manifest, n.TDpred=n.TDpred, n.TIpred=n.TIpred, Tpoints=Tpoints)
     if(any(!is.na(inputmCharacter)))  labels[!is.na(inputmCharacter)] <- inputmCharacter[!is.na(inputmCharacter)]
     
@@ -416,7 +405,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     return(output)
   }
 
-  T0VAR <- processInputMatrix(ctmodelobj['T0VAR'], symmetric = FALSE, randomscale=0.01, diagadd = 10, chol=TRUE)
+  T0VAR <- processInputMatrix(ctmodelobj['T0VAR'], symmetric = FALSE, randomscale=0.01, diagadd = 1, chol=TRUE)
   diag(T0VAR$values) <- log(diag(T0VAR$values))
   diag(T0VAR$values)[diag(T0VAR$values)== -Inf] <- -999
   T0MEANS <- processInputMatrix(ctmodelobj["T0MEANS"], symmetric = FALSE, randomscale=1, diagadd = 0)
@@ -456,6 +445,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     TDPREDMEANS <- processInputMatrix(ctmodelobj["TDPREDMEANS"], symmetric = FALSE, diagadd = 0)
     TDPREDEFFECT <- processInputMatrix(ctmodelobj["TDPREDEFFECT"], symmetric = FALSE, diagadd = 0, randomscale=0.1)
     T0TDPREDCOV <- processInputMatrix(ctmodelobj["T0TDPREDCOV"], symmetric = FALSE, diagadd = 0, randomscale=0.01) 
+
     TDPREDVAR <- processInputMatrix(ctmodelobj["TDPREDVAR"], symmetric = FALSE, diagadd = 1, randomscale=0.01, chol=TRUE)    
     diag(TDPREDVAR$values) <- log(diag(TDPREDVAR$values))
     diag(TDPREDVAR$values)[diag(TDPREDVAR$values)== -Inf] <- -999
@@ -1326,7 +1316,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   if(optimizer=='NPSOL') {
     message("Setting NPSOL optimizer for OpenMx temporarily") 
     OpenMx::mxOption(NULL, "Default optimizer", "NPSOL")
-    OpenMx::mxOption(model, "Function precision", 1e-12) #1e-14
+    # OpenMx::mxOption(model, "Function precision", 1e-12) #1e-14
   }
   if(optimizer=='CSOLNP') {
     message("Setting CSOLNP optimizer for OpenMx temporarily") 
@@ -1633,9 +1623,10 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     manifests <- c(paste0(manifestNames,'_T',rep(0:(Tpoints-1),each=n.manifest)), 
       if(n.TDpred > 0) {paste0(TDpredNames,'_T',rep(0:(Tpoints-2), times=n.TDpred))}, 
       if(n.TIpred > 0) {paste0(TIpredNames) } )
-    covData<-cov(datawide[,manifests],use='pairwise.complete.obs')
+    covData<-matrix(Matrix::nearPD(cov(datawide[,manifests],use='pairwise.complete.obs'))[["mat"]],nrow=length(manifests),
+      dimnames = list(manifests,manifests))
     
-    meanData <- apply(datawide[,manifests],2,mean,na.rm=T)
+    meanData <- apply(datawide[,manifests,drop=FALSE],2,mean,na.rm=T)
     model<-OpenMx::mxModel(model, mxData(covData, type='cov', means=meanData, numObs=nrow(datawide)),
       mxExpectationRAM(M='M'),
       mxFitFunctionML()
@@ -1671,14 +1662,16 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
       )
       
       #free intercepts
+     randIntercepts<- OpenMx::mxMatrix(type = "Full", 
+        labels = paste0('s',rep(unique(datawide[,'id']),each=n.latent),'_', CINT$labels), 
+        values = CINT$values, 
+        free = CINT$free, nrow=n.latent, ncol=n.subjects, name = "randIntercepts")
+      
         model<-OpenMx::mxModel(model,'CINT',remove=T)
        model<-OpenMx::mxModel(model,
-         mxMatrix(type = "Full", 
-           labels = paste0('s',rep(unique(datawide[,'id']),each=n.latent),'_', CINT$labels), 
-           values = CINT$values, 
-           free = CINT$free, nrow=n.latent, ncol=n.subjects, name = "randIntercepts"),
+         randIntercepts,
          # mxAlgebra(name='tCINTmatrix',t(CINTmatrix)),
-         mxAlgebra(name='CINTalg',randIntercepts[,data.subject]),
+         mxAlgebra(name='CINTalg',randIntercepts[,data.id]),
          mxMatrix(name='CINT',labels=paste0('CINTalg[',1:n.latent,',1]'),nrow=n.latent,ncol=1,type='Full')
        )
     } #end multi subject kalman
@@ -1894,10 +1887,11 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
       #     engine<-ifelse(npsol==TRUE, 'NPSOL', 'CSOLNP')
       #     mxOption(NULL, "Default optimizer", "NPSOL")
       model <- OpenMx::mxModel(model, 
-        mxCI(confidenceintervals, interval = 0.95, type = "both"),
-        mxComputeSequence(list(model$compute,
-        mxComputeConfidenceInterval(constraintType=ifelse(optimizer=='NPSOL','none','ineq'),
-          plan=mxComputeGradientDescent(nudgeZeroStarts=FALSE, maxMajorIter=150, gradientAlgo="central"))))) #if 95% confidence intervals are to be calculated
+        mxCI(confidenceintervals, interval = 0.95, type = "both"))
+#       ,
+#         mxComputeSequence(list(model$compute,
+#         mxComputeConfidenceInterval(constraintType=ifelse(optimizer=='NPSOL','none','ineq'),
+#           plan=mxComputeGradientDescent(nudgeZeroStarts=FALSE, maxMajorIter=150, gradientAlgo="central"))))) #if 95% confidence intervals are to be calculated
       #     model <- OpenMx::mxModel(model, 
       #       mxComputeSequence(steps=list(
       #         mxComputeGradientDescent(engine=engine), 

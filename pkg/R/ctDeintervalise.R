@@ -17,7 +17,7 @@ ctDeintervalise<-function(datalong,id='id', dT='dT',startoffset=0){
   for(i in 2:nrow(datalong)){ #for subsequent rows
           if(datalong[i,'id']==datalong[i-1,'id']){ #check if the subject is the same as the row above
             othermissingcount <- ifelse(is.na(datalong[i,'id']==datalong[i-1,'id']),othermissingcount+1, othermissingcount)            
-            datalong[i,'dT']<-sum(datalong[(i-1):i,'dT'],na.rm=FALSE)+startoffset #if same subject, sum the new interval with the prev total time
+            datalong[i,'dT']<-sum(datalong[(i-1):i,'dT'],na.rm=FALSE) #if same subject, sum the new interval with the prev total time
       } else {
         initialmissingcount <- ifelse(is.na(datalong[i,'dT']),initialmissingcount+1,initialmissingcount)
         datalong[i,'dT']<-sum(c(datalong[i,'dT'],startoffset),na.rm=T) #otherwise create new total time with new interval and offset

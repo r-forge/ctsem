@@ -16,7 +16,7 @@
 #' #generate data for 2 process model, each process measured by noisy indicator, 
 #' #stable individual differences in process levels.
 #' 
-#'  generatingModel<-ctModel(Tpoints=10,n.latent=2,n.TDpred=0,n.TIpred=0,n.manifest=2,
+#'  generatingModel<-ctModel(Tpoints=6,n.latent=2,n.TDpred=0,n.TIpred=0,n.manifest=2,
 #'  MANIFESTVAR=diag(.2,2),
 #'  LAMBDA=diag(1,2), 
 #'  DRIFT=matrix(c(-.2,-.15,0,-.1),nrow=2),
@@ -26,9 +26,9 @@
 #'  T0MEANS=matrix(0,ncol=1,nrow=2),
 #'  T0VAR=diag(1,2))
 #'  
-#'  data<-ctGenerate(generatingModel,n.subjects=300,burnin=500)
+#'  data<-ctGenerate(generatingModel,n.subjects=30,burnin=500)
 #'  
-#'  model<-ctModel(Tpoints=10, TRAITVAR='auto', n.latent=2, 
+#'  model<-ctModel(Tpoints=6, TRAITVAR='auto', n.latent=2, 
 #'  n.manifest=2, LAMBDA=diag(2))
 #'
 #'  checkf<-ctFit(data,model)
@@ -67,9 +67,10 @@
 #' LAMBDA=matrix(c(1,"l2","l3",0,0,0,0,1),n.manifest,n.latent),  
 #' TRAITVAR='auto',Tpoints=Tpoints)
 #' 
+#' \dontrun{
 #' fit<-ctFit(data,model, stationary=c('T0VAR','T0MEANS', 'T0TIPREDEFFECT'))
 #' summary(checkf)  
-#'  
+#'  }
 #'  
 #'  
 #'  
@@ -132,9 +133,9 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=300,dT=1,asymptotes=FALSE
   
   if(!all(is.numeric(T0VAR))) { #if T0VAR does not have all values fixed
     print("No T0VAR specified - generated process will be at equilibrium")
-    T0VAR<-diag(100,n.latent)+1 #arbitrarily set it
+    T0VAR<-diag(1,n.latent) #arbitrarily set it
     if(burnin < 200){ #and if burnin has not been set
-      burnin <- 200 #ensure burnin is high enough that arbitrary phit1 doesn't matter
+      burnin <- 500 #ensure burnin is high enough that arbitrary phit1 doesn't matter
     }
   }
   

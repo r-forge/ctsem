@@ -1,8 +1,8 @@
 Package: ctsem
 Type: Package
 Title: Continuous Time Structural Equation Modelling
-Version: 1.1
-Date: 2015-07-017
+Version: 1.1.1
+Date: 2015-08-07
 Authors@R: c(person("Manuel", "Voelkle", role = c("aut","cph"), comment =
     "Original development of continuous time model specification within OpenMx,
     advisor for further development"),person("Han", "Oud", role =
@@ -37,9 +37,9 @@ Description: An easily accessible continuous (and discrete) time dynamic
     the classic problems of random effects models assuming no covariance
     between unit level effects and predictors.  
 License: GPL-3
-Depends: R (>= 3.0.0),  OpenMx (>= 2.0)
+Depends: R (>= 3.0.0),  OpenMx (>= 2.2.4)
 URL: http://ctsem.r-forge.r-project.org/
-Imports:  MASS
+Imports:  MASS, Matrix
 LazyData: Yes
 Suggests: knitr, testthat
 VignetteBuilder: knitr

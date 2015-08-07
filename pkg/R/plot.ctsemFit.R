@@ -41,7 +41,6 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
   for(i in 1:length(ctsummary)){ #this loop reads in the specified continuous time model so the objects are available
     assign(names(ctsummary[i]),eval(parse(text = paste0("ctsummary","$",names(ctsummary[i])))))
   } 
-  
   asymptotes<-ctfitobj$ctfitargs$asymptotes
   DRIFTlabels <- ctfitobj$mxobj$DRIFTlog$labels
   DIFFUSIONlabels <- ctfitobj$mxobj$DIFFUSIONlogchol$labels

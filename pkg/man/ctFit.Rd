@@ -109,16 +109,16 @@ AnomAuthmodel <- ctModel(LAMBDA = matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2),
 Tpoints = 5, n.latent = 2, n.manifest = 2, MANIFESTVAR=diag(0, 2), TRAITVAR = NULL)
 AnomAuthfit <- ctFit(AnomAuth, AnomAuthmodel)
 summary(AnomAuthfit)
-plot(AnomAuthfit, wait=FALSE)
 
 
 ### Single subject time series - using Kalman filter (OpenMx statespace expectation)
 data('ctExample3')
 model <- ctModel(n.latent = 1, n.manifest = 3, Tpoints = 100,
- LAMBDA = matrix(c(1, 'lambda2', 'lambda3'), nrow = 3, ncol = 1),
- MANIFESTMEANS = matrix(c(0, 'manifestmean2', 'manifestmean3'), nrow = 3,
-   ncol = 1), T0VAR = diag(1))
-fit <- ctFit(data = ctExample3, ctmodelobj = model)
+  LAMBDA = matrix(c(1, 'lambda2', 'lambda3'), nrow = 3, ncol = 1),
+  MANIFESTMEANS = matrix(c(0, 'manifestmean2', 'manifestmean3'), nrow = 3,
+    ncol = 1))
+fit <- ctFit(data = ctExample3, ctmodelobj = model, objective = 'Kalman',
+  stationary = c('T0VAR'))
 
 ###Oscillating model from Voelkle & Oud (2013).
 data(Oscillating)
@@ -133,6 +133,5 @@ oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11,
  startValues = inits)
 oscillatingf<-ctFit(Oscillating, oscillatingm, optimizer='SLSQP')
 summary(oscillatingf)
-plot(oscillatingf, wait=FALSE)
 }
 

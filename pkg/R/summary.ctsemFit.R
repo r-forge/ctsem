@@ -24,29 +24,34 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
   if(ridging==TRUE) ridging<- .0001 else ridging <- 0
 
   outlist<-c()
+
   asymptotes<-object$ctfitargs$asymptotes
   stationary<-object$ctfitargs$stationary
   discreteTime <- object$ctfitargs$discreteTime
+  
+  mxobj<-object$mxobj
+  
   out<-list()
-  omxsummary<-getMethod("summary","MxModel")(object[[1]]) #get openmx summary
+  omxsummary<-getMethod("summary","MxModel")(mxobj) #get openmx summary
   
-  n.latent<-object$ctmodelobj$n.latent
-  n.TIpred<-object$ctmodelobj$n.TIpred
-  n.TDpred<-object$ctmodelobj$n.TDpred
-  n.manifest<-object$ctmodelobj$n.manifest
+  n.latent<-nrow(OpenMx::mxEval(DRIFT,mxobj,compute=T))
+n.TIpred<-object$ctmodelobj$n.TIpred
+n.TDpred<-object$ctmodelobj$n.TDpred
+  n.manifest<-nrow(OpenMx::mxEval(LAMBDA,mxobj,compute=T))
   
-  latentNames<-object$ctmodelobj$latentNames
-  manifestNames<-object$ctmodelobj$manifestNames
+  
+  try(latentNames<-object$ctmodelobj$latentNames)
+  try(manifestNames<-object$ctmodelobj$manifestNames)
   output<-list()
   
 
     if(discreteTime==FALSE){
     
-    DRIFT<-tryCatch({ OpenMx::mxEval(DRIFT, object$mxobj,compute=TRUE)}, error=function(e) e )
+    DRIFT<-tryCatch({ OpenMx::mxEval(DRIFT, mxobj,compute=TRUE)}, error=function(e) e )
     tryCatch({  dimnames(DRIFT)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'DRIFT')
     
-    LAMBDA<-tryCatch({ OpenMx::mxEval(LAMBDA, object$mxobj,compute=TRUE)}, error=function(e) e )
+    LAMBDA<-tryCatch({ OpenMx::mxEval(LAMBDA, mxobj,compute=TRUE)}, error=function(e) e )
     tryCatch({  dimnames(LAMBDA)<-list(manifestNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'LAMBDA')
     
@@ -58,11 +63,11 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
     
     DRIFTHATCH<-tryCatch({ (DRIFT %x% diag(n.latent)) + (diag(n.latent) %x% DRIFT)}, error=function(e) e )
     
-      MANIFESTVAR<-tryCatch({ object$mxobj$MANIFESTVAR$result}, error=function(e) e )
+      MANIFESTVAR<-tryCatch({ mxobj$MANIFESTVAR$result}, error=function(e) e )
     tryCatch({  dimnames(MANIFESTVAR)<-list(manifestNames,manifestNames)}, error=function(e) e )
     outlist<-c(outlist,'MANIFESTVAR')
     
-    CINT<-tryCatch({ object$mxobj$CINT$values}, error=function(e) e )
+    CINT<-tryCatch({ mxobj$CINT$values}, error=function(e) e )
     if(asymptotes==TRUE) CINT <- tryCatch({ -DRIFT %*% CINT}, error=function(e) e )
     tryCatch({  rownames(CINT)<-latentNames}, error=function(e) e )
     outlist<-c(outlist,'CINT')
@@ -78,7 +83,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
     
 
     
-    DIFFUSION<-tryCatch({ object$mxobj$DIFFUSION$result}, error=function(e) e )
+    DIFFUSION<-tryCatch({ mxobj$DIFFUSION$result}, error=function(e) e )
     if(asymptotes==TRUE) DIFFUSION <- tryCatch({ matrix(-DRIFTHATCH %*% OpenMx::rvectorize(DIFFUSION), nrow=n.latent, ncol=n.latent)}, error=function(e) e )
     tryCatch({  dimnames(DIFFUSION)<-list(latentNames,latentNames)}, error=function(e) e )
     outlist<-c(outlist,'DIFFUSION')
@@ -115,7 +120,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
     
     
     if('T0VAR' %in% stationary == FALSE){ #then include base T0 matrices
-      T0VAR<-tryCatch({ OpenMx::mxEval(T0VAR, object$mxobj,compute=T)}, error=function(e) e )
+      T0VAR<-tryCatch({ OpenMx::mxEval(T0VAR, mxobj,compute=T)}, error=function(e) e )
       tryCatch({  dimnames(T0VAR)<-list(latentNames,latentNames)}, error=function(e) e )
       outlist<-c(outlist,'T0VAR')
       
@@ -131,7 +136,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
     } # end T0VAR matrices
       
   if('T0MEANS' %in% stationary == FALSE){ #then include base T0 matrices
-      T0MEANS<-tryCatch({ OpenMx::mxEval(T0MEANS, object$mxobj,compute=T)}, error=function(e) e )
+      T0MEANS<-tryCatch({ OpenMx::mxEval(T0MEANS, mxobj,compute=T)}, error=function(e) e )
       tryCatch({  rownames(T0MEANS)<-latentNames}, error=function(e) e )
       outlist<-c(outlist,'T0MEANS')
 }
@@ -140,7 +145,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
     #trait matrices
     if(any(object$ctmodelobj$TRAITVAR != 0)) {
       
-      TRAITVAR<-tryCatch({ OpenMx::mxEval(TRAITVAR, object$mxobj,compute=T)}, error=function(e) e )
+      TRAITVAR<-tryCatch({ OpenMx::mxEval(TRAITVAR, mxobj,compute=T)}, error=function(e) e )
       # if(asymptotes==TRUE) TRAITVAR<-tryCatch({ DRIFT %&% TRAITVAR }, error=function(e) e )
       tryCatch({  dimnames(TRAITVAR)<-list(latentNames,latentNames)}, error=function(e) e )
       outlist<-c(outlist,'TRAITVAR')
@@ -168,7 +173,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
 
 #       if('T0TRAITEFFECT' %in% stationary == FALSE) { #then include T0 trait matrices
 #         
-#          T0TRAITEFFECT<-tryCatch({mxEval(T0TRAITEFFECT, object$mxobj,compute=T)}, error=function(e) e )
+#          T0TRAITEFFECT<-tryCatch({mxEval(T0TRAITEFFECT, mxobj,compute=T)}, error=function(e) e )
 #         tryCatch({  dimnames(T0TRAITEFFECT)<-list(latentNames,latentNames)}, error=function(e) e )
 #         outlist<-c(outlist,'T0TRAITEFFECT')
 #         
@@ -202,7 +207,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
     
     if(any(object$ctmodelobj$MANIFESTTRAITVAR != 0)) {
       
-      MANIFESTTRAITVAR<-tryCatch({ object$mxobj$MANIFESTTRAITVAR$result}, error=function(e) e )
+      MANIFESTTRAITVAR<-tryCatch({ mxobj$MANIFESTTRAITVAR$result}, error=function(e) e )
       tryCatch({  dimnames(MANIFESTTRAITVAR)<-list(manifestNames,manifestNames)}, error=function(e) e )
       outlist<-c(outlist,'MANIFESTTRAITVAR')
       
@@ -220,14 +225,14 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
     #TIpred matrices
     if(n.TIpred > 0) {
       TIpredNames<-object$ctmodelobj$TIpredNames      
-       if(asymptotes==FALSE) TIPREDEFFECT<-tryCatch({object$mxobj$TIPREDEFFECT$values}, error=function(e) e )
-      if(asymptotes==TRUE)   TIPREDEFFECT<-tryCatch({-DRIFT %*% object$mxobj$TIPREDEFFECT$values}, error=function(e) e )
+       if(asymptotes==FALSE) TIPREDEFFECT<-tryCatch({mxobj$TIPREDEFFECT$values}, error=function(e) e )
+      if(asymptotes==TRUE)   TIPREDEFFECT<-tryCatch({-DRIFT %*% mxobj$TIPREDEFFECT$values}, error=function(e) e )
       tryCatch({  dimnames(TIPREDEFFECT)<-list(latentNames,TIpredNames)}, error=function(e) e )
       outlist<-c(outlist,'TIPREDEFFECT')
         
-#       if (randomPredictors==TRUE) TIPREDVAR<-tryCatch({object$mxobj$S$values[TIpredNames,TIpredNames] }, error=function(e) e )
+#       if (randomPredictors==TRUE) TIPREDVAR<-tryCatch({mxobj$S$values[TIpredNames,TIpredNames] }, error=function(e) e )
 #       if(randomPredictors==FALSE) 
-        TIPREDVAR<-tryCatch({OpenMx::mxEval(TIPREDVAR,object$mxobj,compute=T) }, error=function(e) e )
+        TIPREDVAR<-tryCatch({OpenMx::mxEval(TIPREDVAR,mxobj,compute=T) }, error=function(e) e )
       outlist<-c(outlist,'TIPREDVAR')
       
       
@@ -267,7 +272,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
 #               tryCatch({  dimnames(asymTOTALVARstd)<-list(latentNames,latentNames)}, error=function(e) e )
       
     if('TOTIPRED' %in% stationary == FALSE) { #include TIPRED T0 matrices
-      T0TIPREDEFFECT<-tryCatch({OpenMx::mxEval(T0TIPREDEFFECT, object$mxobj,compute=T)}, error=function(e) e )
+      T0TIPREDEFFECT<-tryCatch({OpenMx::mxEval(T0TIPREDEFFECT, mxobj,compute=T)}, error=function(e) e )
       tryCatch({  dimnames(T0TIPREDEFFECT)<-list(latentNames,TIpredNames)}, error=function(e) e )
       outlist<-c(outlist,'T0TIPREDEFFECT')
       
@@ -299,7 +304,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
       
       TDpredNames<-object$ctmodelobj$TDpredNames      
       
-      TDPREDEFFECT<-tryCatch({object$mxobj$TDPREDEFFECT$values}, error=function(e) e )
+      TDPREDEFFECT<-tryCatch({mxobj$TDPREDEFFECT$values}, error=function(e) e )
       tryCatch({  dimnames(TDPREDEFFECT)<-list(latentNames,TDpredNames)}, error=function(e) e )
       outlist<-c(outlist,'TDPREDEFFECT')
       
@@ -308,7 +313,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
       outlist<-c(outlist,'discreteTDPREDEFFECT')
       
 
-        TDPREDVAR<-tryCatch({OpenMx::mxEval(TDPREDVAR,object$mxobj,compute=T) }, error=function(e) e )
+        TDPREDVAR<-tryCatch({OpenMx::mxEval(TDPREDVAR,mxobj,compute=T) }, error=function(e) e )
       tryCatch({  dimnames(TDPREDVAR)<-list(TDpredNames,TDpredNames)}, error=function(e) e )
       outlist<-c(outlist,'TDPREDVAR')
       
