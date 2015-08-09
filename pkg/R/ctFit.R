@@ -209,7 +209,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   ####0 variance predictor fix
   if(n.TDpred>0 & objective != 'Kalman' & objective != 'Kalmanmx'){ #check for 0 variance predictors for random predictors implementation (not needed for Kalman because fixed predictors)
    
-    varCheck<-try(any(diag(cov(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))], 
+    varCheck<-try(any(diag(stats::cov(datawide[, paste0(TDpredNames, '_T', rep(0:(Tpoints-2), each=n.TDpred))], 
       use="pairwise.complete.obs"))==0))
     if(class(varCheck)=='try-error') {
       warning('unable to compute covariance matrix for time dependent predictors - unstable estimates may result if any variances are 0')
@@ -230,7 +230,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
       #       
       #       datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))] <- 
       #         datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))] +
-      #         rnorm(length(datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))]), 0, .1)
+      #         stats::rnorm(length(datawide[, paste0(rep(problempreds, each=(Tpoints-1)), '_T', 0:(Tpoints-2))]), 0, .1)
     }
   }
   
@@ -372,7 +372,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     if(any(!is.na(inputmCharacter)))  labels[!is.na(inputmCharacter)] <- inputmCharacter[!is.na(inputmCharacter)]
     
     #starting values matrix
-    values <- matrix(round(rnorm(length(inputmFixed), 0, randomscale), 3), nrow = nrow(inputm), ncol = ncol(inputm)) #generate start values according to randomscale
+    values <- matrix(round(stats::rnorm(length(inputmFixed), 0, randomscale), 3), nrow = nrow(inputm), ncol = ncol(inputm)) #generate start values according to randomscale
     if(diagadd!= 0)  {values <- values+diag(diagadd, ncol(inputm))} #increase diagonals if specified
     if(addvalues[1]!=FALSE) values <- values+addvalues #add values if specified
     if(symmetric == TRUE)  {values[row(values) > col(values)] <- t(values)[col(values) < row(values)]} #set symmetric if necessary
@@ -807,14 +807,14 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     
     #add cov between all td predictors 
     #     if(fastPredictors==TRUE){ #then don't optimize, just use estimates from cov
-    #       temp<-matrix(paste0('FFF', cov(datawide[, paste0(rep(TDpredNames, each=(Tpoints-1)), '_T', 0:(Tpoints-2))], use='pairwise.complete.obs')), 
+    #       temp<-matrix(paste0('FFF', stats::cov(datawide[, paste0(rep(TDpredNames, each=(Tpoints-1)), '_T', 0:(Tpoints-2))], use='pairwise.complete.obs')), 
     #         nrow=nrow(TDPREDVAR$values))
     #       
     #         TDpreds<-datawide[, paste0(rep(TDpredNames, each=(Tpoints-1)), '_T', 0:(Tpoints-2))]
     #         
-    #         covmodel<-OpenMx::mxModel(mxData(cov(TDpreds), means=apply(TDpreds, 2, mean, na.rm=T), type='cov', numObs=nrow(TDpreds)), 
+    #         covmodel<-OpenMx::mxModel(mxData(stats::cov(TDpreds), means=apply(TDpreds, 2, mean, na.rm=T), type='cov', numObs=nrow(TDpreds)), 
     #           mxMatrix(name='A', values=0, free=F, type='Full', nrow=ncol(TDpreds), ncol=ncol(TDpreds)), 
-    #           mxMatrix(name='S', values=cov(TDpreds), free=T, type='Full', nrow=ncol(TDpreds), ncol=ncol(TDpreds)), 
+    #           mxMatrix(name='S', values=stats::cov(TDpreds), free=T, type='Full', nrow=ncol(TDpreds), ncol=ncol(TDpreds)), 
     #           mxMatrix(name='F', values=diag(ncol(TDpreds)), free=F, type='Full', nrow=ncol(TDpreds), ncol=ncol(TDpreds)), 
     #           mxMatrix(name='M', values=apply(TDpreds, 2, mean, na.rm=T), free=T, type='Full', nrow=1, ncol=ncol(TDpreds)), 
     #           mxExpectationRAM(M='M', dimnames=colnames(TDpreds)), 
@@ -929,7 +929,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
       #       #fast predictor estimates if fastPredictors is set
       #       if(fastPredictors==TRUE){
       #         
-      #         temp<-matrix(paste0('FFF', cov(y=datawide[, TIpredNames], 
+      #         temp<-matrix(paste0('FFF', stats::cov(y=datawide[, TIpredNames], 
       #          x=datawide[, paste0(rep(TDpredNames, each=(Tpoints-1)), '_T', 0:(Tpoints-2))], use='pairwise.complete.obs')), 
       #           nrow=nrow(TDTIPREDCOV$values))
       #         
@@ -1625,7 +1625,7 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
     manifests <- c(paste0(manifestNames,'_T',rep(0:(Tpoints-1),each=n.manifest)), 
       if(n.TDpred > 0) {paste0(TDpredNames,'_T',rep(0:(Tpoints-2), times=n.TDpred))}, 
       if(n.TIpred > 0) {paste0(TIpredNames) } )
-    covData<-matrix(Matrix::nearPD(cov(datawide[,manifests],use='pairwise.complete.obs'))[["mat"]],nrow=length(manifests),
+    covData<-matrix(Matrix::nearPD(stats::cov(datawide[,manifests],use='pairwise.complete.obs'))[["mat"]],nrow=length(manifests),
       dimnames = list(manifests,manifests))
     
     meanData <- apply(datawide[,manifests,drop=FALSE],2,mean,na.rm=T)
@@ -1930,14 +1930,14 @@ ctFit  <- function(datawide, ctmodelobj, confidenceintervals = NULL,
   
   if(plotOptimization==TRUE){
     
-    checkpoints<-read.table(file='ctsem.omx', header=T, sep='\t')
-    if(carefulFit==TRUE) checkpoints<-rbind(checkpoints, NA, NA, NA, NA, NA, read.table(file='ctsemCarefulfit.omx', header=T, sep='\t'))
-    mfrow<-par()$mfrow
-    par(mfrow=c(3, 3))
+    checkpoints<-utils::read.table(file='ctsem.omx', header=T, sep='\t')
+    if(carefulFit==TRUE) checkpoints<-rbind(checkpoints, NA, NA, NA, NA, NA, utils::read.table(file='ctsemCarefulfit.omx', header=T, sep='\t'))
+    mfrow<-graphics::par()$mfrow
+    graphics::par(mfrow=c(3, 3))
     for(i in 6:ncol(checkpoints)) {
-      plot(checkpoints[, i], main=colnames(checkpoints)[i])
+      graphics::plot(checkpoints[, i], main=colnames(checkpoints)[i])
     }
-    par(mfrow=mfrow)
+    graphics::par(mfrow=mfrow)
     deleteCheckpoints <- readline('Remove created checkpoint file, ctsem.omx? y/n \n')
     if(deleteCheckpoints=='y') file.remove(file='ctsem.omx')
   }

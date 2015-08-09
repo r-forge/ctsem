@@ -262,7 +262,7 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
 # #       indparammodifiermatrix <- OpenMx::mxMatrix(name='indparammodifiermatrix', 
 # #         free=c(FALSE, rep(TRUE,length(unique(groupings))-1)),
 # #         nrow=length(unique(groupings)), 
-# #         values=c(0,rnorm(length(unique(groupings))-1,0,.01)),
+# #         values=c(0,stats::rnorm(length(unique(groupings))-1,0,.01)),
 # #         ncol=length(hyperpars),
 # #         labels=rbind(NA,indparamlabelswithoutfirst))
 # #       
@@ -347,14 +347,14 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
 # #             ']')
 # #         
 # #         fullmodel[[ tm[i,'model'] ]] [[  tm[i,'matrix'] ]]$free[tm[i,'row'], tm[i,'col'] ] <- FALSE
-# #         fullmodel[[ tm[i,'model'] ]] [[  tm[i,'matrix'] ]]$values[tm[i,'row'], tm[i,'col'] ] <- rnorm(1,0,.01)
+# #         fullmodel[[ tm[i,'model'] ]] [[  tm[i,'matrix'] ]]$values[tm[i,'row'], tm[i,'col'] ] <- stats::rnorm(1,0,.01)
 # #       }
 # 
 #       fullmodel<-mxModel(fullmodel, 
 #         mxMatrix(name='indParameters',
 #         nrow=nrow(indparamlabels), 
 #           ncol=length(baseparams),
-#           # values=rep(baseparams,each=length(unique(groupings))) + rnorm(length(unique(groupings))*length(hyperpars),0,.00),
+#           # values=rep(baseparams,each=length(unique(groupings))) + stats::rnorm(length(unique(groupings))*length(hyperpars),0,.00),
 #           values=indparamvalues,
 #         labels=indparamlabels, 
 #           free=TRUE))
@@ -384,7 +384,7 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
 # # indparammodifiers<-mxMatrix(name=paste0('indparammodifiers'),
 # #   labels=unlist(indparamlabels),
 # #   free=TRUE,
-# #   values=rep(baseparams,each=length(unique(groupings))) + rnorm(length(unique(groupings))*length(hyperpars),0,.01),
+# #   values=rep(baseparams,each=length(unique(groupings))) + stats::rnorm(length(unique(groupings))*length(hyperpars),0,.01),
 # #     nrow=length(unique(groupings)),
 # #   ncol=length(hyperpars))      
 # # 

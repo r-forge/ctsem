@@ -32,7 +32,7 @@ summary.ctsemFit<-function(object,ridging=FALSE,timeInterval=1,...){
   mxobj<-object$mxobj
   
   out<-list()
-  omxsummary<-getMethod("summary","MxModel")(mxobj) #get openmx summary
+  omxsummary<-methods::getMethod("summary","MxModel")(mxobj) #get openmx summary
   
   n.latent<-nrow(OpenMx::mxEval(DRIFT,mxobj,compute=T))
 n.TIpred<-object$ctmodelobj$n.TIpred

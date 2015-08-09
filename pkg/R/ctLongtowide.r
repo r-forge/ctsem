@@ -57,7 +57,7 @@ ctLongToWide <- function(datalong, id, time, manifestNames, TDpredNames=NULL, TI
   data_long<-cbind(data_long,discrete.time.point) #add discrete time point column  
   
   
-  manifestNames_wide<-reshape(data_long,  #create wide format manifestNames
+  manifestNames_wide<-stats::reshape(data_long,  #create wide format manifestNames
     v.names = manifestNames, 
     idvar = "id", 
     timevar = "discrete.time.point", 
@@ -78,7 +78,7 @@ ctLongToWide <- function(datalong, id, time, manifestNames, TDpredNames=NULL, TI
   TDpred_wide<-matrix(NA,ncol=0,nrow=nrow(manifestNames_wide)) #set null dataframe to avoid errors
   if(!is.null(TDpredNames[1])){ #if TDpredNames are specified
     for(i in 1:length(TDpredNames)){ #for every TDpredictor
-      predi <- reshape(data_long, 
+      predi <- stats::reshape(data_long, 
         v.names = TDpredNames[i], 
         idvar = "id", 
         timevar = "discrete.time.point", 
@@ -100,7 +100,7 @@ ctLongToWide <- function(datalong, id, time, manifestNames, TDpredNames=NULL, TI
   
   
   
-  time_wide<-reshape(data_long,  
+  time_wide<-stats::reshape(data_long,  
     idvar = "id",  #create time variables block
     timevar = "discrete.time.point", 
     direction = "wide",
@@ -125,7 +125,7 @@ ctLongToWide <- function(datalong, id, time, manifestNames, TDpredNames=NULL, TI
       data_long[which(data_long[,TIpredNames[i]] < -99999),TIpredNames[i]] <- NA #when no TI predictors exist above sums to -Inf, so set to NA
     })
     
-    TIpred_wide<-reshape(data_long, 
+    TIpred_wide<-stats::reshape(data_long, 
       v.names=manifestNames, 
       idvar = "id",  #reshape TIpreds with other data
       timevar = "discrete.time.point", 

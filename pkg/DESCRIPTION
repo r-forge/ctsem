@@ -39,7 +39,7 @@ Description: An easily accessible continuous (and discrete) time dynamic
 License: GPL-3
 Depends: R (>= 3.0.0),  OpenMx (>= 2.2.4)
 URL: http://ctsem.r-forge.r-project.org/
-Imports:  MASS, Matrix
+Imports:  MASS, Matrix, stats, utils,graphics,methods, grDevices   
 LazyData: Yes
 Suggests: knitr, testthat
 VignetteBuilder: knitr

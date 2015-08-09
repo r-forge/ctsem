@@ -34,7 +34,7 @@
 
 \item{ylab}{Y axis label.}
 
-\item{...}{Other options passed to plot().}
+\item{...}{Other options passed to \code{plot()}.}
 }
 \value{
 Nothing. Side-effect: plots graphs.

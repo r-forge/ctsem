@@ -14,7 +14,7 @@
 #' @param xlab X axis label.
 #' @param ylab Y axis label.
 #' @param meansylim Vector of min and max limits for mean trajectory plot. 'auto' calculates automatically.
-#' @param ... Other options passed to plot().
+#' @param ... Other options passed to \code{plot()}.
 #' @return Nothing. Side-effect: plots graphs.
 #' @examples 
 #' ### example from Driver, Oud, Voelkle (2015), 
@@ -60,7 +60,7 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
   }
   if(max.time=='auto' & ctfitobj$ctfitargs$objective=='cov') stop('max.time argument must be set when plotting covariance based data')
   
-  colourvector <- rainbow(ncol(DRIFT),v=.8) #set plot colours
+  colourvector <- grDevices::rainbow(ncol(DRIFT),v=.8) #set plot colours
   j<-matrix(seq(0,max.time,1/resolution)[-1],ncol=1) #time steps
   
   
@@ -105,13 +105,13 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
     if(meansylim=='auto') meansylim<- c(min(means),max(means))
     
     
-    plot(j, means[,1],   type = "l", xlab = xlab, ylab = ylab, 
+    graphics::plot(j, means[,1],   type = "l", xlab = xlab, ylab = ylab, 
       main="Process means",
       xlim=c(0,max.time), ylim=meansylim, lwd=2,col=colourvector[1])
     if(n.latent > 1) { 
       for(i in 2:n.latent){
-        points(j, means[,i], type = "l", lwd=2,col=colourvector[i])
-        legend("topright",legend=latentNames,text.col=colourvector,bty="n")
+        graphics::points(j, means[,i], type = "l", lwd=2,col=colourvector[i])
+        graphics::legend("topright",legend=latentNames,text.col=colourvector,bty="n")
       }
     }
     
@@ -133,14 +133,14 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
       colnames(withinvar)<-DIFFUSIONlabels[lower.tri(DIFFUSIONlabels,diag=T)]
       
       
-      colourvector <- rainbow(length(DRIFT[upper.tri(DRIFT,diag=T)==T]),v=.8) 
-      plot(j, withinvar[,1],   type = "l", xlab = xlab, ylab = ylab, 
+      colourvector <- grDevices::rainbow(length(DRIFT[upper.tri(DRIFT,diag=T)==T]),v=.8) 
+      graphics::plot(j, withinvar[,1],   type = "l", xlab = xlab, ylab = ylab, 
         main="Within subject variance / covariance",
         xlim=c(0,max.time), ylim=c(min(withinvar),max(withinvar)), lwd=2,col=colourvector[1])
       if(n.latent > 1) { 
         for(i in 2:ncol(withinvar)){
-          points(j, withinvar[,i], type = "l", lwd=2,col=colourvector[i])
-          legend("topright",legend=colnames(withinvar),text.col=colourvector,bty="n")
+          graphics::points(j, withinvar[,i], type = "l", lwd=2,col=colourvector[i])
+          graphics::legend("topright",legend=colnames(withinvar),text.col=colourvector,bty="n")
         }
       }  
      
@@ -202,14 +202,14 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
 #       colnames(betweenvariance)<-indexMatrix(dimension=n.latent,symmetrical=TRUE,unique=T,
 #         upper=FALSE,sep='_',indices=F,namesvector=latentNames)
 #       
-#         colourvector <- rainbow(length(DRIFT[upper.tri(DRIFT,diag=T)==T]),v=.8) 
-#         plot(j, betweenvariance[,1],   type = "l", xlab = xlab, ylab = ylab, 
+#         colourvector <- grDevices::rainbow(length(DRIFT[upper.tri(DRIFT,diag=T)==T]),v=.8) 
+#         graphics::plot(j, betweenvariance[,1],   type = "l", xlab = xlab, ylab = ylab, 
 #           main="Between subject variance / covariance",
 #           xlim=c(0,max.time), ylim=c(min(betweenvariance),max(betweenvariance)), lwd=2,col=colourvector[1])
 #         if(n.latent > 1) { 
 #           for(i in 2:ncol(withinvar)){
-#             points(j, betweenvariance[,i], type = "l", lwd=2,col=colourvector[i])
-#             legend("topright",legend=colnames(betweenvariance),text.col=colourvector,bty="n")
+#             graphics::points(j, betweenvariance[,i], type = "l", lwd=2,col=colourvector[i])
+#             graphics::legend("topright",legend=colnames(betweenvariance),text.col=colourvector,bty="n")
 #           }
 #         }  
 #         
@@ -250,17 +250,17 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
     if(min(ar) < 0) ylim[1] <- min(ar)
     
     #AR coefficient plot
-    plot(j, ar[,1],   type = "l", xlab = xlab, ylab = ylab, 
+    graphics::plot(j, ar[,1],   type = "l", xlab = xlab, ylab = ylab, 
       ylim=ylim, xlim=c(0,max.time), main="Autoregression",lwd=2,col=2,...)
     if(ncol(DRIFT)>1){ #if there is more than one AR parameter to plot
       for( i in 2:ncol(ar)){
-        points(j, ar[,i], type = "l", lwd=2,col=colourvector[i],...)
+        graphics::points(j, ar[,i], type = "l", lwd=2,col=colourvector[i],...)
       }
     }
     
     arnames <- paste0(arvars)
     
-    legend("topright",legend=arnames,text.col=colourvector,bty="n")
+    graphics::legend("topright",legend=arnames,text.col=colourvector,bty="n")
   }
   
   
@@ -271,7 +271,7 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
     }
     if(standardiseCR==TRUE) CRtitle<-"Standardised crossregression"
     if(standardiseCR==FALSE) CRtitle<-"Unstandardised crossregression"
-    colourvector <- rainbow(ncol(cl),v=.8) #set plot colours
+    colourvector <- grDevices::rainbow(ncol(cl),v=.8) #set plot colours
     
     clvars<-DRIFTlabels[row(DRIFT)!=col(DRIFT) & (mxobj$DRIFTlog$free==TRUE | mxobj$DRIFTlog$values != 0)]
     #     if(length(clvars[is.na(as.numeric(clvars))]) > 0) {#if there is 1 or more estimated cross effects
@@ -281,15 +281,15 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
     if(max(cl) > 1) ylim[2] <- max(cl)
     if(min(cl) < -1) ylim[1] <- min(cl)
     
-    plot(j, cl[,1],   type = "l", xlab = xlab, ylab = ylab, 
+    graphics::plot(j, cl[,1],   type = "l", xlab = xlab, ylab = ylab, 
       ylim=ylim, lwd=2,col=colourvector[1], main=CRtitle,...)
     
     if(ncol(cl)>1){
     for(i in 2:(ncol(cl))){
-      points(j, cl[,i], type = "l", lwd=2,col=colourvector[i],...)
+      graphics::points(j, cl[,i], type = "l", lwd=2,col=colourvector[i],...)
     }    
     }
-    legend("topright",legend=paste0(clvars),text.col=colourvector,bty="n")
+    graphics::legend("topright",legend=paste0(clvars),text.col=colourvector,bty="n")
   }
   
   
