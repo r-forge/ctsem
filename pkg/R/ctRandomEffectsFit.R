@@ -1,4 +1,4 @@
-#' Fits a multiple group continuous time model.
+#' Fits a random effects continuous time model.
 #' 
 #' Fits a single continuous time structural equation models to multiple groups (where each group contains 1 or more subjects),
 #' by default, all parameters are free across groups.  Can also be used to easily estimate seperate models for each group.
@@ -61,7 +61,7 @@
 #' @export
 
 
-ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=NA,
+ctRandomEffectsFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=NA,
  carefulFit=FALSE,
   retryattempts=5,showInits=FALSE,...){
 
@@ -140,8 +140,8 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
       omxmodels)
     
 
-    hyperpars<-NULL
-    if(!is.null(hyperpars)){ 
+#     hyperpars<-NULL
+#     if(!is.null(hyperpars)){ 
       
             params<-OpenMx::omxLocateParameters(fullmodel) #get list of parameters from base model
             
@@ -162,7 +162,7 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
         indParams<-OpenMx::omxGetParameters(basemodel)[paste0(groupings[x],'_',names(baseparams)) %in% names(OpenMx::omxGetParameters(basemodel))]
         
         algstring<-paste0("mxAlgebra(name='algFit', ",groupings[x],".objective + sum(
-          (indParams - meanParams) * (indParams - meanParams) * hyperpars * hyperpars))")
+          (indParams - meanParams) * (indParams - meanParams)))")
         fitAlg<-eval(parse(text=algstring))
         
         penalisedmodel<-OpenMx::mxModel(paste0('penalised_',groupings[x]), 
@@ -174,10 +174,10 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
             labels=paste0('mean_',names(baseparams)),
             free=T,nrow=1,ncol=length(meanParams)),
           
-          mxMatrix(name='hyperpars',
-            values=hyperpars,
-            labels=paste0('penalty_',names(baseparams)),
-            free=F, nrow=1, ncol=length(meanParams)),
+#           mxMatrix(name='hyperpars',
+#             values=hyperpars,
+#             labels=paste0('penalty_',names(baseparams)),
+#             free=F, nrow=1, ncol=length(meanParams)),
           
           mxMatrix(name='indParams', 
             labels=names(indParams), #paste0(groupings[x],'_',names(meanParams)),
@@ -198,13 +198,13 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
           labels=paste0('mean_',names(baseparams)),
           free=T,nrow=1,ncol=length(baseparams)),
         
-        mxMatrix(name='hyperpars',
-          values=hyperpars,
-          labels=paste0('penalty_',names(baseparams)),
-          free=F, nrow=1, ncol=length(baseparams)),
+#         mxMatrix(name='hyperpars',
+#           values=hyperpars,
+#           labels=paste0('penalty_',names(baseparams)),
+#           free=F, nrow=1, ncol=length(baseparams)),
         
-        mxFitFunctionMultigroup(paste0('penalised_',groupings)))
-    }
+        mxFitFunctionMultigroup(paste0('penalised_',groupings))
+      )
     
     ###old approach to hypervars
 #     if(!is.null(hyperpars)){ #extracts global parameter names for params with variance limits

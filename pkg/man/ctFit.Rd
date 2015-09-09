@@ -4,20 +4,18 @@
 \alias{ctFit}
 \title{Fit a ctsem object}
 \usage{
-ctFit(datawide, ctmodelobj, confidenceintervals = NULL, objective = "auto",
+ctFit(datawide, ctmodelobj, objective = "auto",
   stationary = c("T0TIPREDEFFECT"), optimizer = "SLSQP",
-  retryattempts = 10, iterationSummary = TRUE, carefulFit = FALSE,
+  retryattempts = 10, iterationSummary = FALSE, carefulFit = TRUE,
   showInits = FALSE, asymptotes = FALSE, meanIntervals = FALSE,
   plotOptimization = F, nofit = FALSE, discreteTime = FALSE,
-  verbose = 0, useOptimizer = TRUE, omxStartValues = NULL)
+  verbose = 0, useOptimizer = TRUE, omxStartValues = NULL,
+  transformedParams = TRUE)
 }
 \arguments{
 \item{datawide}{the data you wish to fit a ctsem model to.}
 
 \item{ctmodelobj}{the ctsem model object you wish to use, specified via the \code{\link{ctModel}} function.}
-
-\item{confidenceintervals}{vector of character strings of matrices or single parameters
-to calculate 95\% confidence intervals for.  e.g. c("DRIFT", "TRAITVAR").}
 
 \item{objective}{'auto' selects either 'Kalman', if fitting to single subject data,
 or 'mxRAM' for multiple subjects. For single subject data, 'Kalman' uses the \code{mxExpectationStateSpace }
@@ -37,7 +35,7 @@ set to 'all' to constrain all T0 matrices to stationarity.}
 
 \item{optimizer}{character string, defaults to the open-source 'SLSQP' optimizer that is distributed
 in all versions of OpenMx. However, 'NPSOL' may sometimes perform better for these problems,
-though requires that you have installed OpenMx manually, by running:
+though requires that you have installed OpenMx via the OpenMx web site, by running:
 \code{source('http://openmx.psyc.virginia.edu/getOpenMx.R')}}
 
 \item{retryattempts}{Number of times to retry the start value randomisation and fit procedure, if non-convergance or uncertain fits occur.}
@@ -50,11 +48,16 @@ fits the specified model normally, using these estimates as starting values.
 Can help with optimization when extreme parameter estimates are returned,
 though results in user specified start values being ignored for the final fit.}
 
-\item{showInits}{if TRUE, prints the list of user specified and auto generated
-starting values for free parameters.}
+\item{showInits}{if TRUE, prints the list of
+starting values for free parameters. These are the 'raw' values used by OpenMx,
+and reflect the log (var / cov matrices) or -log(DRIFT matrices) transformations used in ctsem.
+These are saved in the fit object under \code{fitobject$omxStartValues}.}
 
 \item{asymptotes}{when TRUE, optimizes over asymptotic parameter matrices instead of continuous time parameter matrices.
-Can be useful for optimization and model development, but should result in equivalent models if optimization is adequate.}
+Can be faster for optimization and in some cases makes reliable convergance easier. Will result in equivalent models
+when continuous time input matrices (DRIFT, DIFFUSION, CINT) are free, but fixing the values of
+any such matrices will result in large differences - a value of 0 in a cell of the normal continuous time DIFFUSION matrix
+does not necessarily result in a value of 0 for the asymptotic DIFFUSION matrix, for instance.}
 
 \item{meanIntervals}{Use average time intervals for each column for calculation
 (both faster and inaccurate to the extent that intervals vary across individuals).}
@@ -78,16 +81,24 @@ useful for using custom optimizers or fitting to specified parameters.}
 \code{log(diffusionvarianceeparam)} starting values for free parameters, as captured by
 OpenMx function \code{omxGetParameters(ctmodelobj$mxobj)}. These values will take precedence
 over any starting values already specified using ctModel.}
+
+\item{transformedParams}{Logical indicating whether or not to log transform parameters internally to allow unconstrained estimation over
+entire 'sensible' range for parameters. When TRUE (default) raw OpenMx parameters will reflect these transformations and may be harder to
+interpret, but summary matrices
+are re-transformed into regular continuous time parameter matrices, and may be interpreted as normal.}
 }
 \description{
 This function fits continuous time SEM models specified via \code{\link{ctModel}}
 to a dataset containing one or more subjects.
 }
 \details{
-DATA STRUCTURE:
- Single row per subject. Manifest variables first, grouped by measurement occasion (with later measurements to the right),
- then 1st time dependent predictor (all observations 1:(Tpoints-1)), further time dependent predictors,
- time intervals between observations, time independent predictors.
+For full discussion of how to structure the data and use this function, see the vignette using: \code{vignette('ctsem')}.
+ Models are specified using the \code{\link{ctModel}} function.
+ For help regarding the summary function, see \code{\link{summary.ctsemFit}},
+ and for the plot function, \code{\link{plot.ctsemFit}}.
+ Multigroup models may be specified using \code{\link{ctMultigroupFit}}.
+ Confidence intervals for any matrices and or parameters
+ may be estimated using \code{\link{ctCI}}.
 }
 \examples{
 mfrowOld<-par()$mfrow
@@ -101,7 +112,9 @@ traitmodel <- ctModel(n.manifest=2, n.latent=2, Tpoints=6, LAMBDA=diag(2),
   latentNames=c('LeisureTime', 'Happiness'), TRAITVAR="auto")
 traitfit <- ctFit(datawide=ctExample1, ctmodelobj=traitmodel)
 summary(traitfit)
+\dontrun{
 plot(traitfit, wait=FALSE)
+
 
 ###Example from Voelkle, Oud, Davidov, and Schmidt (2012) - anomia and authoritarianism.
 data(AnomAuth)
@@ -120,20 +133,25 @@ model <- ctModel(n.latent = 1, n.manifest = 3, Tpoints = 100,
 fit <- ctFit(data = ctExample3, ctmodelobj = model, objective = 'Kalman',
   stationary = c('T0VAR'))
 
-\dontrun{
+
 ###Oscillating model from Voelkle & Oud (2013).
-data(Oscillating)
-inits <- c(-38,-.5,1,10,10)
-names(inits)<-c('cross','auto','diffusion22','T0var11','T0var22')
-oscillatingm<-ctModel(n.latent = 2, n.manifest=1, Tpoints=11,
- MANIFESTVAR=matrix(c(0), nrow=1, ncol=1),
- LAMBDA=matrix(c(1, 0), nrow=1, ncol=2),
- DRIFT=matrix(c(0, "cross", 1, "auto"), nrow=2, ncol=2),
- CINT=matrix(c(0,0), ncol=1, nrow=2, ),
- DIFFUSION=matrix(c(0, 0, 0, "diffusion22"), nrow=2, ncol=2),
- startValues = inits)
-oscillatingf<-ctFit(Oscillating, oscillatingm, optimizer='SLSQP')
-summary(oscillatingf)
+data("Oscillating")
+
+inits <- c(-38, -.5, 1, 1, .1, 1, 0, .9)
+names(inits) <- c("crosseffect","autoeffect", "diffusion",
+  "T0var11", "T0var21", "T0var22","m1", "m2")
+
+oscillatingm <- ctModel(n.latent = 2, n.manifest = 1, Tpoints = 11,
+  MANIFESTVAR = matrix(c(0), nrow = 1, ncol = 1),
+  LAMBDA = matrix(c(1, 0), nrow = 1, ncol = 2),
+  T0MEANS = matrix(c('m1', 'm2'), nrow = 2, ncol = 1),
+  T0VAR = matrix(c("T0var11", "T0var21", 0, "T0var22"), nrow = 2, ncol = 2),
+  DRIFT = matrix(c(0, "crosseffect", 1, "autoeffect"), nrow = 2, ncol = 2),
+  CINT = matrix(0, ncol = 1, nrow = 2),
+  DIFFUSION = matrix(c(0, 0, 0, "diffusion"), nrow = 2, ncol = 2),
+  startValues = inits)
+
+oscillatingf <- ctFit(Oscillating, oscillatingm)
 }
 }
 

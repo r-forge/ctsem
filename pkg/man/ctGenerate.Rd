@@ -4,7 +4,7 @@
 \alias{ctGenerate}
 \title{Simulate continuous time data}
 \usage{
-ctGenerate(ctmodelobj, n.subjects = 1000, burnin = 300, dT = 1,
+ctGenerate(ctmodelobj, n.subjects = 1000, burnin = 0, dT = 1,
   asymptotes = FALSE)
 }
 \arguments{

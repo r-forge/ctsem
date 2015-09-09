@@ -95,7 +95,7 @@
 #'  
 #' @export
 
-ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=300,dT=1,asymptotes=FALSE){
+ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=0,dT=1,asymptotes=FALSE){
   
   ###read in model
   for(i in 1:length(ctmodelobj)){ #this loop reads in the specified continuous time model
@@ -117,7 +117,7 @@ ctGenerate<-function(ctmodelobj,n.subjects=1000,burnin=300,dT=1,asymptotes=FALSE
   }
   
   #lower triangular transform
-  for(tempmatname in c('T0VAR','MANIFESTVAR','TRAITVAR','MANIFESTTRAITVAR','TDPREDVAR','TIPREDVAR')){
+  for(tempmatname in c('T0VAR','MANIFESTVAR', 'DIFFUSION', 'TRAITVAR','MANIFESTTRAITVAR','TDPREDVAR','TIPREDVAR')){
 
     tryCatch(assign(tempmatname,get(tempmatname) %*% t(get(tempmatname))), error=function(e) {
       assign(tempmatname,NULL)})
