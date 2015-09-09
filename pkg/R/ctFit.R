@@ -2005,15 +2005,24 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
 #     if(transformedParams==FALSE) model$DRIFT$free[row(DRIFT$free)!=col(DRIFT$free)] <- FALSE
     
     if(traitExtension==TRUE) penalties <- OpenMx::mxAlgebra(name='penalties', 
-      sum(T0VAR*T0VAR) + sum(DRIFT*DRIFT) + sum(DIFFUSION*DIFFUSION) + sum(MANIFESTVAR*MANIFESTVAR) +
-        sum(TRAITVAR * TRAITVAR))
+      sum(T0VAR*T0VAR) - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
+        sum(DRIFT*DRIFT) - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
+        sum(DIFFUSION*DIFFUSION) - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
+        sum(MANIFESTVAR*MANIFESTVAR) - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)) +
+        sum(TRAITVAR * TRAITVAR) - sum(diag2vec(TRAITVAR) * diag2vec(TRAITVAR)))
     
     if(manifestTraitvarExtension==TRUE & traitExtension==FALSE) penalties <- OpenMx::mxAlgebra(name='penalties', 
-      sum(T0VAR*T0VAR) + sum(DRIFT*DRIFT) + sum(DIFFUSION*DIFFUSION) + sum(MANIFESTVAR*MANIFESTVAR) +
-        sum(MANIFESTTRAITVAR * MANIFESTTRAITVAR) )
+      sum(T0VAR*T0VAR) - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
+        sum(DRIFT*DRIFT) - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
+        sum(DIFFUSION*DIFFUSION) - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
+      sum(MANIFESTVAR*MANIFESTVAR) - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)) +
+      sum(MANIFESTTRAITVAR * MANIFESTTRAITVAR) - sum(diag2vec(TRAITVAR) * diag2vec(TRAITVAR)))
     
     if(traitExtension==FALSE & manifestTraitvarExtension==FALSE) penalties <- OpenMx::mxAlgebra(name='penalties', 
-      sum(T0VAR*T0VAR) + sum(DRIFT*DRIFT) + sum(DIFFUSION*DIFFUSION) + sum(MANIFESTVAR*MANIFESTVAR) )
+      sum(T0VAR*T0VAR) - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
+        sum(DRIFT*DRIFT) - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
+        sum(DIFFUSION*DIFFUSION) - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
+      sum(MANIFESTVAR*MANIFESTVAR) - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)))
  
     penaltyLL <- OpenMx::mxAlgebra(sum(ctsem.fitfunction)+ctsem.penalties*FIMLpenaltyweight, name='penaltyLL')
     
@@ -2030,7 +2039,7 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
     model<-OpenMx::mxModel('ctsemCarefulFit', 
       modelwithpenalties, penaltyLL,
       #             mxMatrix(type='Full', name='FIMLpenaltyweight', nrow=1, ncol=1, values=FIMLpenaltyweight, free=F), 
-      mxMatrix(name='FIMLpenaltyweight', values=1,free=F,nrow=1,ncol=1,type='Full' ), 
+      mxMatrix(name='FIMLpenaltyweight', values=100,free=F,nrow=1,ncol=1,type='Full' ), 
       mxFitFunctionAlgebra('penaltyLL')
     )
  
@@ -2119,6 +2128,9 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
 
     mxobj<-try(suppressWarnings(OpenMx::mxRun(model))) #fit with the penalised likelihood
     #         mxobj<-OpenMx::mxRun(model) #fit with the penalised likelihood
+    
+    # browser()
+    message(paste0('carefulFit penalisation:  ', mxEval(ctsem.penalties, mxobj,compute=T),'\n'))
     newstarts <- try(OpenMx::omxGetParameters(mxobj)) #get the params
     if(showInits==TRUE) {
       message('Generated start values from carefulFit=TRUE')

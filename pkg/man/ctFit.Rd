@@ -6,7 +6,7 @@
 \usage{
 ctFit(datawide, ctmodelobj, objective = "auto",
   stationary = c("T0TIPREDEFFECT"), optimizer = "SLSQP",
-  retryattempts = 10, iterationSummary = FALSE, carefulFit = TRUE,
+  retryattempts = 10, iterationSummary = FALSE, carefulFit = FALSE,
   showInits = FALSE, asymptotes = FALSE, meanIntervals = FALSE,
   plotOptimization = F, nofit = FALSE, discreteTime = FALSE,
   verbose = 0, useOptimizer = TRUE, omxStartValues = NULL,
