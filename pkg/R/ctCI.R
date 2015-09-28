@@ -35,7 +35,7 @@ ctCI<-function(ctfitobj, confidenceintervals, optimizer='NPSOL', verbose=0){
   
   if(optimizer=='NPSOL'){
   if(imxHasNPSOL()==TRUE) mxOption(NULL,'Default optimizer', 'NPSOL')
-  if(imxHasNPSOL()==FALSE) warning("NPSOL optimizer not available - recommend installing OpenMx using command: 'source('http://openmx.psyc.virginia.edu/getOpenMx.R') ")
+  if(imxHasNPSOL()==FALSE) warning("NPSOL optimizer not available - recommend installing OpenMx using command:  source('http://openmx.psyc.virginia.edu/getOpenMx.R') ")
   }
   
   if(optimizer!='NPSOL') {
@@ -72,7 +72,7 @@ ctCI<-function(ctfitobj, confidenceintervals, optimizer='NPSOL', verbose=0){
 #   }
 
   ctfitobj$mxobj<-try(mxRun(ctfitobj$mxobj,intervals=TRUE,suppressWarnings=T,silent=T))
-  
+  ctfitobj$mxobj@compute<-NULL
   mxOption(NULL,'Default optimizer', originalOptimizer)
   
   return(ctfitobj)

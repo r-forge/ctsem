@@ -12,8 +12,7 @@
 
 \item{group}{character string of subgroup to display summary parameters for. Default of 'show chooser' displays list and lets you select.}
 
-\item{timeInterval}{positive numeric value specifying time interval to use for discrete parameter matrices, defaults to 1.
-#'}
+\item{timeInterval}{positive numeric value specifying time interval to use for discrete parameter matrices, defaults to 1.}
 
 \item{...}{additional parameters to pass.}
 }

@@ -6,7 +6,7 @@
 \usage{
 ctFit(datawide, ctmodelobj, objective = "auto",
   stationary = c("T0TIPREDEFFECT"), optimizer = "SLSQP",
-  retryattempts = 10, iterationSummary = FALSE, carefulFit = FALSE,
+  retryattempts = 30, iterationSummary = FALSE, carefulFit = TRUE,
   showInits = FALSE, asymptotes = FALSE, meanIntervals = FALSE,
   plotOptimization = F, nofit = FALSE, discreteTime = FALSE,
   verbose = 0, useOptimizer = TRUE, omxStartValues = NULL,
@@ -45,8 +45,8 @@ though requires that you have installed OpenMx via the OpenMx web site, by runni
 \item{carefulFit}{if TRUE, first fits the specified model with a penalised likelihood function
 to force MANIFESTVAR, DRIFT, TRAITVAR, MANIFESTTRAITVAR parameters to remain close to 0, then
 fits the specified model normally, using these estimates as starting values.
-Can help with optimization when extreme parameter estimates are returned,
-though results in user specified start values being ignored for the final fit.}
+Can help to ensure optimization begins at sensible, non-exteme values,
+though results in any user specified start values being ignored for the final fit (though they are still used for initial fit).}
 
 \item{showInits}{if TRUE, prints the list of
 starting values for free parameters. These are the 'raw' values used by OpenMx,

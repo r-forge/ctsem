@@ -1,8 +1,8 @@
 Package: ctsem
 Type: Package
 Title: Continuous Time Structural Equation Modelling
-Version: 1.1.2
-Date: 2015-09-07
+Version: 1.1.3
+Date: 2015-09-28
 Authors@R: c(person("Manuel", "Voelkle", role = c("aut","cph"), comment =
     "Original development of continuous time model specification within OpenMx,
     advisor for further development"),person("Han", "Oud", role =

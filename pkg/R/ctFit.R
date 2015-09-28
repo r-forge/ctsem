@@ -54,8 +54,8 @@ utils::globalVariables(c("invDRIFT","II","negDRIFTlog","vec2diag","diag2vec",
 #' @param carefulFit if TRUE, first fits the specified model with a penalised likelihood function 
 #' to force MANIFESTVAR, DRIFT, TRAITVAR, MANIFESTTRAITVAR parameters to remain close to 0, then
 #' fits the specified model normally, using these estimates as starting values. 
-#' Can help with optimization when extreme parameter estimates are returned, 
-#' though results in user specified start values being ignored for the final fit.
+#' Can help to ensure optimization begins at sensible, non-exteme values, 
+#' though results in any user specified start values being ignored for the final fit (though they are still used for initial fit).
 #' @param plotOptimization If TRUE, uses checkpointing for OpenMx function \code{mxRun}, set to checkpoint every iteration, 
 #' output checkpoint file to working directory, then creates a plot for each parameter's values over iterations.
 #' @param meanIntervals Use average time intervals for each column for calculation 
@@ -147,7 +147,7 @@ ctFit  <- function(datawide, ctmodelobj,
   objective='auto', 
   stationary=c('T0TIPREDEFFECT'), 
   optimizer='SLSQP', 
-  retryattempts=10, iterationSummary=FALSE, carefulFit=TRUE,  
+  retryattempts=30, iterationSummary=FALSE, carefulFit=TRUE,  
   showInits=FALSE, asymptotes=FALSE,
   meanIntervals=FALSE, plotOptimization=F, 
   nofit = FALSE, discreteTime=FALSE, verbose=0, useOptimizer=TRUE,
@@ -450,7 +450,7 @@ ctFit  <- function(datawide, ctmodelobj,
   LAMBDA <- processInputMatrix(ctmodelobj["LAMBDA"], symmetric = FALSE, randomscale=.1, addvalues=1, diagadd = 0)
   MANIFESTVAR <- processInputMatrix(ctmodelobj["MANIFESTVAR"],  symmetric = FALSE, randomscale=.01, diagadd = 1)    
 
-  DRIFT <- processInputMatrix(ctmodelobj["DRIFT"],  symmetric = FALSE,randomscale=0, addvalues=-.001, diagadd=ifelse(discreteTime==TRUE,.5,-.4))
+  DRIFT <- processInputMatrix(ctmodelobj["DRIFT"],  symmetric = FALSE,randomscale=0, addvalues= -.05, diagadd=ifelse(discreteTime==TRUE,.5,-.4))
 
   DIFFUSION <- processInputMatrix(ctmodelobj["DIFFUSION"], symmetric = FALSE, randomscale=0.01, diagadd = 1)      
 
@@ -1534,13 +1534,13 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
   
   
   
-  if(useOptimizer==TRUE) model <- OpenMx::mxModel(model,
-    mxComputeSequence(list(
-      #  		    mxComputeGradientDescent(verbose=1),  # default is forward
-      mxComputeGradientDescent(verbose=verbose,
-        #gradientAlgo="central", nudgeZeroStarts=FALSE, #tolerance=.001,  gradientIterations = 1,
-        maxMajorIter=3000),
-      mxComputeNumericDeriv(), mxComputeStandardError(),   mxComputeReportDeriv())))
+#   if(useOptimizer==TRUE) model <- OpenMx::mxModel(model,
+#     mxComputeSequence(list(
+#       #  		    mxComputeGradientDescent(verbose=1),  # default is forward
+#       mxComputeGradientDescent(verbose=verbose,
+#         #gradientAlgo="central", nudgeZeroStarts=FALSE, #tolerance=.001,  gradientIterations = 1,
+#         maxMajorIter=3000),
+#       mxComputeNumericDeriv(), mxComputeStandardError(),   mxComputeReportDeriv())))
   
   
   #model options
@@ -2004,31 +2004,36 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
 #     if(transformedParams==TRUE) model$negDRIFTlog$free[row(DRIFT$free)!=col(DRIFT$free)] <- FALSE #fix off diagonal DRIFT params
 #     if(transformedParams==FALSE) model$DRIFT$free[row(DRIFT$free)!=col(DRIFT$free)] <- FALSE
     
-    if(traitExtension==TRUE) penalties <- OpenMx::mxAlgebra(name='penalties', 
-      sum(T0VAR*T0VAR) - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
-        sum(DRIFT*DRIFT) - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
-        sum(DIFFUSION*DIFFUSION) - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
-        sum(MANIFESTVAR*MANIFESTVAR) - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)) +
-        sum(TRAITVAR * TRAITVAR) - sum(diag2vec(TRAITVAR) * diag2vec(TRAITVAR)))
-    
-    if(manifestTraitvarExtension==TRUE & traitExtension==FALSE) penalties <- OpenMx::mxAlgebra(name='penalties', 
-      sum(T0VAR*T0VAR) - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
-        sum(DRIFT*DRIFT) - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
-        sum(DIFFUSION*DIFFUSION) - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
-      sum(MANIFESTVAR*MANIFESTVAR) - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)) +
-      sum(MANIFESTTRAITVAR * MANIFESTTRAITVAR) - sum(diag2vec(TRAITVAR) * diag2vec(TRAITVAR)))
-    
-    if(traitExtension==FALSE & manifestTraitvarExtension==FALSE) penalties <- OpenMx::mxAlgebra(name='penalties', 
-      sum(T0VAR*T0VAR) - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
-        sum(DRIFT*DRIFT) - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
-        sum(DIFFUSION*DIFFUSION) - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
-      sum(MANIFESTVAR*MANIFESTVAR) - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)))
+#     if(traitExtension==TRUE) penalties <- OpenMx::mxAlgebra(name='penalties', 
+#       sum(T0VAR*T0VAR) + # - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
+#         sum(DRIFT*DRIFT) + #  - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
+#         sum(DIFFUSION*DIFFUSION) + #  - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
+#         sum(MANIFESTVAR*MANIFESTVAR) + #  - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)) +
+#         sum(TRAITVAR * TRAITVAR) #  - sum(diag2vec(TRAITVAR) * diag2vec(TRAITVAR))
+#         )
+#     
+#     if(manifestTraitvarExtension==TRUE & traitExtension==FALSE) penalties <- OpenMx::mxAlgebra(name='penalties', 
+#       sum(T0VAR*T0VAR) + #  - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
+#         sum(DRIFT*DRIFT) + #  - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
+#         sum(DIFFUSION*DIFFUSION) + #  - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
+#       sum(MANIFESTVAR*MANIFESTVAR) + #  - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR)) +
+#       sum(MANIFESTTRAITVAR * MANIFESTTRAITVAR) #  - sum(diag2vec(TRAITVAR) * diag2vec(TRAITVAR))
+#         )
+#     
+#     if(traitExtension==FALSE & manifestTraitvarExtension==FALSE) 
+      
+      penalties <- OpenMx::mxAlgebra(name='penalties', 
+      sum(T0VAR*T0VAR) + #  - sum(diag2vec(T0VAR) * diag2vec(T0VAR)) + 
+        sum(DRIFT*DRIFT) + #  - sum(diag2vec(DRIFT) * diag2vec(DRIFT)) + 
+        sum(DIFFUSION*DIFFUSION) + #  - sum(diag2vec(DIFFUSION) * diag2vec(DIFFUSION)) +
+      sum(MANIFESTVAR*MANIFESTVAR) #  - sum(diag2vec(MANIFESTVAR) * diag2vec(MANIFESTVAR))
+        )
  
     penaltyLL <- OpenMx::mxAlgebra(sum(ctsem.fitfunction)+ctsem.penalties*FIMLpenaltyweight, name='penaltyLL')
     
     if(simpleDynamics==TRUE){
       penaltyLL <- OpenMx::mxAlgebra(sum(ctsem.fitfunction)+ctsem.penalties*FIMLpenaltyweight + ctsem.simpleDynPenalty, name='penaltyLL')
-     penalties<- list(penalties, OpenMx::mxAlgebra(name='simpleDynPenalty', sum(abs(ieigenval(DRIFT)))*100) )
+     penalties<- list(penalties, OpenMx::mxAlgebra(name='simpleDynPenalty', sum(abs(ieigenval(DRIFT)))*1) )
     }
     
     modelwithpenalties <- OpenMx::mxModel(model, 
@@ -2118,6 +2123,8 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
     model<- OpenMx::mxOption(model, 'Checkpoint Count', 1)    
   }
   
+  model<-mxOption(model,'RAM Inverse Optimization', 'No')
+  
   ###fit model
   if(!is.null(omxStartValues)) model<-omxSetParameters(model,
     labels=names(omxStartValues)[names(omxStartValues) %in% names(omxGetParameters(model))],
@@ -2130,7 +2137,7 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
     #         mxobj<-OpenMx::mxRun(model) #fit with the penalised likelihood
     
     # browser()
-    message(paste0('carefulFit penalisation:  ', mxEval(ctsem.penalties, mxobj,compute=T),'\n'))
+    # message(paste0('carefulFit penalisation:  ', mxEval(ctsem.penalties, mxobj,compute=T),'\n'))
     newstarts <- try(OpenMx::omxGetParameters(mxobj)) #get the params
     if(showInits==TRUE) {
       message('Generated start values from carefulFit=TRUE')
@@ -2172,11 +2179,11 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
     # }
     
 
-    if(useOptimizer==TRUE) mxobj <- OpenMx::mxTryHard(model, initialTolerance=1e-16,
+    if(useOptimizer==TRUE) mxobj <- mxTryHard(model, initialTolerance=1e-16,
       initialGradientIterations=1,
       showInits=showInits, checkHess=TRUE, greenOK=FALSE, 
       iterationSummary=iterationSummary, bestInitsOutput=FALSE, verbose=verbose,
-      extraTries=retryattempts, loc=1, scale=2, paste=FALSE)
+      extraTries=retryattempts, loc=1, scale=0.1, paste=FALSE)
     
     if(useOptimizer==FALSE) mxobj <- OpenMx::mxRun(model,useOptimizer=useOptimizer)
   }

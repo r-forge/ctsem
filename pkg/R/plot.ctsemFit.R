@@ -39,6 +39,10 @@ plot.ctsemMultigroupFit<-function(x,group='show chooser',...){
 #' @param AR if TRUE, plot of autoregressive values from 0 to max.time included in output.
 #' @param CR if TRUE, plot of cross regressive values from 0 to max.time included in output.
 #' @param standardiseCR if TRUE (default), cross regression values are standardised based on estimated within subject variance.
+#' @param randomImpulse if TRUE (default), plots expected change in processes given a random fluctuation of +1 for each process -- 
+#' plot is then a mixture of DIFFUSION and DRIFT characteristics.
+#' @param experimentalImpulse if TRUE (default), plots expected change in processes given an exogenous input of +1 for each process -- 
+#' alternate characterisation of autoregressive and cross regressive plots.
 #' @param xlab X axis label.
 #' @param ylab Y axis label.
 #' @param meansylim Vector of min and max limits for mean trajectory plot. 'auto' calculates automatically.
@@ -58,14 +62,17 @@ plot.ctsemMultigroupFit<-function(x,group='show chooser',...){
 #' @export
 
 plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
-  withinVariance=TRUE,AR=TRUE,CR=TRUE,standardiseCR=TRUE,xlab="Time",
+  withinVariance=TRUE,AR=TRUE,CR=TRUE,standardiseCR=TRUE,randomImpulse=TRUE,
+  experimentalImpulse=TRUE,
+  xlab="Time",
   meansylim='auto',ARylim='auto', CRylim='auto', ylab="Value",...){
+  
   message("Plotting fit")
 
   ctfitobj<-x
   mxobj<-ctfitobj$mxobj
 
-  ctsummary<-summary(ctfitobj)
+  ctsummary<-summary(ctfitobj,verbose=TRUE)
 
   #read in values
   for(i in 1:length(ctsummary)){ #this loop reads in the specified continuous time model so the objects are available
@@ -90,8 +97,8 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
   TDpredNames <- ctfitobj$ctmodelobj$TDpredNames
   Tpoints<-ctfitobj$ctmodelobj$Tpoints
   stationary<-ctfitobj$ctfitargs$stationary
-  T0MEANS<-OpenMx::mxEval(T0MEANS, ctfitobj$mxobj,compute=T)
-  T0VAR<-OpenMx::mxEval(T0VAR, ctfitobj$mxobj,compute=T)
+  T0MEANS<-OpenMx::mxEval(T0MEANS, ctfitobj$mxobj,compute=F)
+  T0VAR<-OpenMx::mxEval(T0VAR, ctfitobj$mxobj,compute=F)
 
   if(max.time=='auto' & ctfitobj$ctfitargs$objective!='cov'){
   if(max.time=="auto" & ctfitobj$ctfitargs$objective!='Kalman') max.time	<- max(rowSums(as.matrix(mxobj$data$observed[,paste0('dT',1:(Tpoints-1)),drop=FALSE]),na.rm=T)) 			# max time of plot 
@@ -102,13 +109,13 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
   if(resolution=='auto') resolution <- ceiling(500/max.time)
   
   colourvector <- grDevices::rainbow(ncol(DRIFT),v=.8) #set plot colours
-  j<-matrix(seq(0,max.time,1/resolution)[-1],ncol=1) #time steps
+  times<-matrix(seq(0,max.time,1/resolution)[-1],ncol=1) #time steps
   
   
   if(mean==TRUE){# 2. plot mean trend  
    
     #TD predictors
-    tdpredeffect<-matrix(0,nrow=length(j),ncol=n.latent) #default 0 matrix
+    tdpredeffect<-matrix(0,nrow=length(times),ncol=n.latent) #default 0 matrix
     #extract and round absolute times to resolution
     if(n.TDpred >0){
     times<-cbind(matrix(rep(0,nrow(mxobj$data$observed)),ncol=1), matrix(apply(mxobj$data$observed[,paste0('dT',1:(Tpoints-1))],1,function(x){
@@ -121,23 +128,23 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
     ),byrow=T,ncol=(Tpoints-1)))
     
     #extract tdpred observations and match with rounded times
-    TDpredMeans<-matrix(NA,nrow=length(j),ncol=n.TDpred)
+    TDpredMeans<-matrix(NA,nrow=length(times),ncol=n.TDpred)
     for(predi in 1:n.TDpred){
-    TDpredObs<-matrix(0,nrow=length(j),ncol=nrow(mxobj$data$observed))
+    TDpredObs<-matrix(0,nrow=length(times),ncol=nrow(mxobj$data$observed))
     TDpredObs[cbind(c(times*resolution),c(row(times)))] <- mxobj$data$observed[,paste0(TDpredNames[predi],'_T',0:(Tpoints-2))]
     TDpredMeans[,predi]<-apply(TDpredObs,1,mean,na.rm=T)
     }
     
     TDPREDEFFECT <- OpenMx::mxEval(TDPREDEFFECT,mxobj,compute=T)
     ARforResolution <- OpenMx::expm(DRIFT*(1/resolution))
-    for(i in 2:length(j)){
+    for(i in 2:length(times)){
      tdpredeffect[i,]<- ARforResolution %*% t(tdpredeffect[i-1, ,drop=F]) + TDPREDEFFECT %*% t(TDpredMeans[i-1, ,drop=F])
     }
     }
 
     
-    means<-matrix(apply(cbind(1:length(j)),1,function(x) {
-      dT<-j[x]
+    means<-matrix(apply(cbind(1:length(times)),1,function(x) {
+      dT<-times[x]
       OpenMx::expm(DRIFT*dT) %*% T0MEANS + 
         solve(DRIFT) %*% (OpenMx::expm(DRIFT*dT)-diag(nrow(DRIFT))) %*% CINT +
         t(tdpredeffect[x,,drop=F])
@@ -146,12 +153,12 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
     if(meansylim=='auto') meansylim<- c(min(means),max(means))
     
     
-    graphics::plot(j, means[,1],   type = "l", xlab = xlab, ylab = ylab, 
+    graphics::plot(times, means[,1],   type = "l", xlab = xlab, ylab = ylab, 
       main="Process means",
       xlim=c(0,max.time), ylim=meansylim, lwd=2,col=colourvector[1])
     if(n.latent > 1) { 
       for(i in 2:n.latent){
-        graphics::points(j, means[,i], type = "l", lwd=2,col=colourvector[i])
+        graphics::points(times, means[,i], type = "l", lwd=2,col=colourvector[i])
         graphics::legend("topright",legend=latentNames,text.col=colourvector,bty="n")
       }
     }
@@ -165,7 +172,7 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
     
     if(withinVariance==TRUE){ #plot within subject variance
       DRIFTHATCH<-(DRIFT %x% diag(n.latent) + diag(n.latent) %x% DRIFT)
-      withinvar<-matrix(apply(j,1,function(x) matrix( 
+      withinvar<-matrix(apply(times,1,function(x) matrix( 
         OpenMx::expm(DRIFT %x% x) %*% T0VAR  %*% t(OpenMx::expm(DRIFT %x% x)) + #initial variance
           matrix(solve(DRIFTHATCH) %*% ((OpenMx::expm(DRIFTHATCH %x% x)) -  diag(n.latent^2) ) %*% #diffusion process
               OpenMx::rvectorize(DIFFUSION),nrow=n.latent),nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
@@ -175,12 +182,12 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
       
       
       colourvector <- grDevices::rainbow(length(DRIFT[upper.tri(DRIFT,diag=T)==T]),v=.8) 
-      graphics::plot(j, withinvar[,1],   type = "l", xlab = xlab, ylab = ylab, 
+      graphics::plot(times, withinvar[,1],   type = "l", xlab = xlab, ylab = ylab, 
         main="Within subject variance / covariance",
         xlim=c(0,max.time), ylim=c(min(withinvar),max(withinvar)), lwd=2,col=colourvector[1])
       if(n.latent > 1) { 
         for(i in 2:ncol(withinvar)){
-          graphics::points(j, withinvar[,i], type = "l", lwd=2,col=colourvector[i])
+          graphics::points(times, withinvar[,i], type = "l", lwd=2,col=colourvector[i])
           graphics::legend("topright",legend=colnames(withinvar),text.col=colourvector,bty="n")
         }
       }  
@@ -202,14 +209,14 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
 #         if(!is.null(ctfitobj$ctmodelobj$TRAITVAR)) {
 #           T0TRAITEFFECT<-OpenMx::mxEval(T0TRAITEFFECT, ctfitobj$mxobj,compute=T)
 #           
-#  if(asymptotes==FALSE) traitvariance<-matrix(apply(j,1,function(x) matrix( 
+#  if(asymptotes==FALSE) traitvariance<-matrix(apply(times,1,function(x) matrix( 
 #           (OpenMx::expm(DRIFT %x% x) %*% ( T0TRAITEFFECT) + (solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% x) - diag(n.latent))))  %*% 
 #             TRAITVAR %*% t(
 #               (OpenMx::expm(DRIFT %x% x) %*% ( T0TRAITEFFECT) + (solve(DRIFT) %*% (OpenMx::expm(DRIFT %x% x) - diag(n.latent)))) )          
 #           ,nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
 #           byrow=T,ncol=length(diag(n.latent)[row(diag(n.latent))>=col(diag(n.latent))]))
 #           
-#           if(asymptotes==TRUE) traitvariance<-matrix(apply(j,1,function(x) matrix( 
+#           if(asymptotes==TRUE) traitvariance<-matrix(apply(times,1,function(x) matrix( 
 #             (OpenMx::expm(DRIFT %x% x) %*% ( T0TRAITEFFECT) + #remaining t0 effect
 #               (diag(n.latent)-OpenMx::expm(DRIFT*x))) %&%  asymTRAITVAR, #plus discrete interval effect
 #             ,nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
@@ -220,7 +227,7 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
       
 #       if(n.TIpred > 0) {
 #         T0TIPREDEFFECT<-OpenMx::mxEval(T0TIPREDEFFECT, ctfitobj$mxobj,compute=T)
-#  if(asymptotes==FALSE) tipredvariance<-matrix(apply(j,1,function(x) matrix( 
+#  if(asymptotes==FALSE) tipredvariance<-matrix(apply(times,1,function(x) matrix( 
 #             ( (OpenMx::expm(DRIFT %x% x)) %*% (T0TIPREDEFFECT ) + #T0 loading
 #             (solve(DRIFT) %*%(OpenMx::expm(DRIFT %x% x) - diag(n.latent)) %*% TIPREDEFFECT ) ) %*% #discrete loading
 #             TIPREDVAR %*% t( #variance of ti predictor
@@ -230,7 +237,7 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
 #           ,nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
 #           byrow=T,ncol=length(diag(n.latent)[row(diag(n.latent))>=col(diag(n.latent))]))
 #         
-#         if(asymptotes==TRUE) tipredvariance<-matrix(apply(j,1,function(x) matrix( 
+#         if(asymptotes==TRUE) tipredvariance<-matrix(apply(times,1,function(x) matrix( 
 #           ( (OpenMx::expm(DRIFT %x% x)) %*% (T0TIPREDEFFECT ) + #T0 loading
 #               (solve(DRIFT) %*%(OpenMx::expm(DRIFT %x% x) - diag(n.latent)) %*% TIPREDEFFECT ) )  %&% TIPREDVAR,  #discrete loading
 #            nrow=n.latent)[row(diag(n.latent))>=col(diag(n.latent))]), 
@@ -244,12 +251,12 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
 #         upper=FALSE,sep='_',indices=F,namesvector=latentNames)
 #       
 #         colourvector <- grDevices::rainbow(length(DRIFT[upper.tri(DRIFT,diag=T)==T]),v=.8) 
-#         graphics::plot(j, betweenvariance[,1],   type = "l", xlab = xlab, ylab = ylab, 
+#         graphics::plot(times, betweenvariance[,1],   type = "l", xlab = xlab, ylab = ylab, 
 #           main="Between subject variance / covariance",
 #           xlim=c(0,max.time), ylim=c(min(betweenvariance),max(betweenvariance)), lwd=2,col=colourvector[1])
 #         if(n.latent > 1) { 
 #           for(i in 2:ncol(withinvar)){
-#             graphics::points(j, betweenvariance[,i], type = "l", lwd=2,col=colourvector[i])
+#             graphics::points(times, betweenvariance[,i], type = "l", lwd=2,col=colourvector[i])
 #             graphics::legend("topright",legend=colnames(betweenvariance),text.col=colourvector,bty="n")
 #           }
 #         }  
@@ -265,14 +272,14 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
   
   # 3. plot autoregressive/cross-lagged coefficients as function of time interval
   
-  ar<- matrix(apply(j,1,function(x) c(diag(OpenMx::expm(DRIFT*x)))),ncol=nrow(DRIFT),byrow=T)
+  ar<- matrix(apply(times,1,function(x) c(diag(OpenMx::expm(DRIFT*x)))),ncol=nrow(DRIFT),byrow=T)
   
   if(standardiseCR==TRUE) {
-    standardiser<-suppressWarnings(rep(sqrt(diag(abs(asymDIFFUSION))),each=n.latent) / rep(diag(sqrt(abs(asymDIFFUSION))),times=n.latent))
-#     if(any(is.nan(standardiser))) {
-#       message('Unable to standardardise cross regression - check asymptotic diffusion. Plotting unstandardised.')
-#       standardiseCR<-FALSE
-#     }
+    standardiser<-try(suppressWarnings(rep(sqrt(diag(abs(asymDIFFUSION))),each=n.latent) / rep(diag(sqrt(abs(asymDIFFUSION))),times=n.latent)))
+    if(class(standardiser)=='try-error') {
+      message('Unable to standardardise cross regression - plotting unstandardised.')
+      standardiseCR<-FALSE
+    }
     standardiser[is.nan(standardiser)]<-0
   }
   if(standardiseCR==FALSE) standardiser<-1
@@ -280,7 +287,7 @@ plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
   if(ctfitobj$ctfitargs$transformedParams==TRUE) driftindices<-(mxobj$negDRIFTlog$free==TRUE | mxobj$negDRIFTlog$values != 0)
 if(ctfitobj$ctfitargs$transformedParams==FALSE) driftindices<-(mxobj$DRIFT$free==TRUE | mxobj$DRIFT$values != 0)
 
-  cl<- matrix(apply(j,1,function(x) {
+  cl<- matrix(apply(times,1,function(x) {
     c((OpenMx::expm(DRIFT*x)*standardiser)[row(DRIFT)!=col(DRIFT) & driftindices==TRUE])
   }
   ),ncol=length(DRIFT[row(DRIFT)!=col(DRIFT) & driftindices==TRUE]),byrow=T)
@@ -296,11 +303,11 @@ if(ctfitobj$ctfitargs$transformedParams==FALSE) driftindices<-(mxobj$DRIFT$free=
     }
 
     #AR coefficient plot
-    graphics::plot(j, ar[,1],   type = "l", xlab = xlab, ylab = ylab, 
+    graphics::plot(times, ar[,1],   type = "l", xlab = xlab, ylab = ylab, 
       ylim=ARylim, xlim=c(0,max.time), main="Autoregression",lwd=2,col=2,...)
     if(ncol(DRIFT)>1){ #if there is more than one AR parameter to plot
       for( i in 2:ncol(ar)){
-        graphics::points(j, ar[,i], type = "l", lwd=2,col=colourvector[i],...)
+        graphics::points(times, ar[,i], type = "l", lwd=2,col=colourvector[i],...)
       }
     }
     
@@ -329,17 +336,82 @@ if(ctfitobj$ctfitargs$transformedParams==FALSE) driftindices<-(mxobj$DRIFT$free=
     if(min(cl) < -1) CRylim[1] <- min(cl)
     }
     
-    graphics::plot(j, cl[,1],   type = "l", xlab = xlab, ylab = ylab, 
+    graphics::plot(times, cl[,1],   type = "l", xlab = xlab, ylab = ylab, 
       ylim=CRylim, lwd=2,col=colourvector[1], main=CRtitle,...)
     
     if(ncol(cl)>1){
     for(i in 2:(ncol(cl))){
-      graphics::points(j, cl[,i], type = "l", lwd=2,col=colourvector[i],...)
+      graphics::points(times, cl[,i], type = "l", lwd=2,col=colourvector[i],...)
     }    
     }
     graphics::legend("topright",legend=paste0(clvars),text.col=colourvector,bty="n")
   }
   
+  
+  
+  
+  if(randomImpulse==TRUE && ncol(DRIFT)>1){   #randomCR coefficients
+
+    colourvector <- grDevices::rainbow(ncol(DRIFT),v=.8) #set plot colours
+
+    for( coli in 1:ncol(DRIFT)){
+      
+      if(wait==TRUE){
+        message("Press [enter] to display next graph")
+        readline()
+      }
+ 
+      impulse<-rep(0,ncol(DRIFT))
+      impulse[coli]<-1
+      DIFFUSIONdiag<-diag(diag(DIFFUSION),n.latent)
+      DIFFUSIONstd<-solve(sqrt(DIFFUSIONdiag)) %*% DIFFUSION %*% t(solve(sqrt(DIFFUSIONdiag)))
+      impulse<- DIFFUSIONstd %*% impulse
+      impulseresponse<-lapply(times,function(x) expm(DRIFT *x) %*% impulse)
+      
+      graphics::plot(times, unlist(lapply(impulseresponse,function(x) x[1] )),   type = "l", xlab = xlab, ylab = ylab, 
+        ylim=CRylim, lwd=2,col=colourvector[1], main=paste0('Expec. given obs. change on ',latentNames[coli]),...)
+      graphics::legend("topright",legend=paste0(latentNames),text.col=colourvector,bty="n")
+      
+      if(n.latent>1) {
+        for(rowi in 2:nrow(DRIFT)){
+          graphics::points(times, unlist(lapply(impulseresponse,function(x) x[rowi] )),   type = "l",  
+            lwd=2,col=colourvector[rowi],...)
+        }
+      }
+      
+    
+    }
+  }
+  
+  if(experimentalImpulse==TRUE && ncol(DRIFT)>1){   #randomCR coefficients
+    
+    colourvector <- grDevices::rainbow(ncol(DRIFT),v=.8) #set plot colours
+    
+    for( coli in 1:ncol(DRIFT)){
+      
+      if(wait==TRUE){
+        message("Press [enter] to display next graph")
+        readline()
+      }
+      
+      impulse<-rep(0,ncol(DRIFT))
+      impulse[coli]<-1
+      impulseresponse<-lapply(times,function(x) expm(DRIFT *x) %*% impulse)
+      
+      graphics::plot(times, unlist(lapply(impulseresponse,function(x) x[1] )),   type = "l", xlab = xlab, ylab = ylab, 
+        ylim=CRylim, lwd=2,col=colourvector[1], main=paste0('Expec. given input on ',latentNames[coli]),...)
+      graphics::legend("topright",legend=paste0(latentNames),text.col=colourvector,bty="n")
+      
+      if(n.latent>1) {
+        for(rowi in 2:nrow(DRIFT)){
+          graphics::points(times, unlist(lapply(impulseresponse,function(x) x[rowi] )),   type = "l",  
+            lwd=2,col=colourvector[rowi],...)
+        }
+      }
+      
+      
+    }
+  }
   
   
 }
