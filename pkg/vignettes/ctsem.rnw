@@ -808,8 +808,20 @@ summary(example1traitfit)$omxsummary$CI
 The following script loops over a sequence in which data is generated from a very simple model (to facilitate comparison), then various packages are used to fit the data, and the distribution of parameter estimates is then plotted. \pkg{ctsem} is used to generate 500 time points of data for a single individual, for a single perfectly measured, stationary process with a drift value of -0.3. The different packages at times use different transformations of the parameters, but for ease of comparison these are transformed to the drift parameter in \pkg{ctsem}. This comparison is not intended as a critique of any package, differences in intended use and estimation routines may result in the observed differences, and it is hoped the provided code  may help others to explore alternatives when necessary.
 
 <<packagecomparison, cache=TRUE, fig.keep='none'>>=
-output <- matrix(NA, 30, 7)
-colnames(output) <- c('True', 'ctsem', 'cts', 'PSM', 'yuima', 'arima')
+  if (!requireNamespace("PSM", quietly = TRUE)) {
+    stop("PSM package needed for this function to work. Please install it.",
+      call. = FALSE)
+  }
+  if (!requireNamespace("cts", quietly = TRUE)) {
+    stop("cts package needed for this function to work. Please install it.",
+      call. = FALSE)
+  }
+  if (!requireNamespace("yuima", quietly = TRUE)) {
+    stop("yuima package needed for this function to work. Please install it.",
+      call. = FALSE)
+  }
+output <- matrix(NA, 10, 7)
+colnames(output) <- c('True', 'ctsem', 'cts', 'PSM', 'yuima', 'arima', 'OpenMx')
 for(i in 1:nrow(output)){
 generatingModel <- ctModel(n.latent = 1, n.manifest = 1, Tpoints = 500,
   LAMBDA = diag(1), DRIFT = matrix(-.3, nrow = 1),
@@ -865,7 +877,7 @@ output[i,7] <- mxEval(DRIFT, ctsemFit$mxobj)
 ### plot output
 plot(density(output[1:i, 2]), xlim = c(-.4, -.1), lty = 2, lwd = 1, 
   ylab='Density',
-  main = 'Density of estimates of drift parameter (true value -0.3)')
+  main = 'Density of drift parameter estimates (true value -0.3)')
 points(density(output[1:i, 3]), col='red', type='l', lty=3, lwd=1)
 points(density(output[1:i, 4]), col='green', type='l', lty=2, lwd=1)
 points(density(output[1:i, 5]), col='blue', type='l', lwd=1, lty=3)
@@ -890,7 +902,7 @@ legend('topleft', bty='n',
   text.col = c('black','red','green','blue', 'yellow'),
   legend = c('ctsem', 'cts', 'PSM', 'arima', 'OpenMx'))
 @
-\caption{Density of drift parameter estimates of 30 simulated datasets of a single process, stationary model with no measurement error, a true drift value of -0.3, and 500 observations of a single individual.}
+\caption{Density of drift parameter estimates from simulated datasets of a single process, stationary model with no measurement error, a true drift value of -0.3, and 500 observations of a single individual.}
 \end{figure}
 \end{document}
 
