@@ -155,6 +155,7 @@ ctFit  <- function(datawide, ctmodelobj,
   
  # transformedParams<-TRUE
  simpleDynamics<-FALSE
+ if(nofit == TRUE) carefulFit <- FALSE
   
   n.latent<-ctmodelobj$n.latent
   n.manifest<-ctmodelobj$n.manifest
@@ -1953,12 +1954,12 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
     
     if(n.TDpred>0){
       discreteCINT_T1labels<-matrix(paste0('discreteCINT_T1[', 1:n.latent, ',','1]'), nrow=n.latent)
-      TDPREDEFFECT_T1labels<-matrix(paste0('TDPREDEFFECT_T1[', 1:n.latent, ',', rep(1:n.TDpred, each=n.latent), ']'), nrow=n.latent)
+      discreteTDPREDEFFECT_T1labels<-matrix(paste0('discreteTDPREDEFFECT_T1[', 1:n.latent, ',', rep(1:n.TDpred, each=n.latent), ']'), nrow=n.latent)
       TDPREDEFFECT$ref<-paste0('data.', TDpredNames)
       
       model<-OpenMx::mxModel(model, 
         mxMatrix(name='B', free=FALSE , nrow=n.latent, ncol=n.TDpred+1, 
-          labels=cbind(discreteCINT_T1labels, TDPREDEFFECT_T1labels)), 
+          labels=cbind(discreteCINT_T1labels, discreteTDPREDEFFECT_T1labels)), 
         
         mxMatrix(name='D', nrow=n.manifest, ncol=1+n.TDpred, 
           free=c(MANIFESTMEANS$free, rep(FALSE, n.TDpred*n.manifest)), 
