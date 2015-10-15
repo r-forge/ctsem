@@ -72,8 +72,7 @@ utils::globalVariables(c("invDRIFT","II","negDRIFTlog","vec2diag","diag2vec",
 #' @param verbose Integer between 0 and 3. Sets mxComputeGradientDescent messaging level, defaults to 0.
 #' @param useOptimizer Logical. Defaults to TRUE.  Passes argument to \code{mxRun}, 
 #' useful for using custom optimizers or fitting to specified parameters.
-#' @param omxStartValues A named vector containing already transformed (e.g. \code{log(-(driftdiagonalparam))} or 
-#' \code{log(diffusionvarianceeparam)} starting values for free parameters, as captured by
+#' @param omxStartValues A named vector containing the raw (potentially log transformed) OpenMx starting values for free parameters, as captured by
 #' OpenMx function \code{omxGetParameters(ctmodelobj$mxobj)}. These values will take precedence 
 #' over any starting values already specified using ctModel.
 #' @param transformedParams Logical indicating whether or not to log transform parameters internally to allow unconstrained estimation over
@@ -147,7 +146,7 @@ ctFit  <- function(datawide, ctmodelobj,
   objective='auto', 
   stationary=c('T0TIPREDEFFECT'), 
   optimizer='SLSQP', 
-  retryattempts=30, iterationSummary=FALSE, carefulFit=TRUE,  
+  retryattempts=15, iterationSummary=FALSE, carefulFit=TRUE,  
   showInits=FALSE, asymptotes=FALSE,
   meanIntervals=FALSE, plotOptimization=F, 
   nofit = FALSE, discreteTime=FALSE, verbose=0, useOptimizer=TRUE,
@@ -155,6 +154,7 @@ ctFit  <- function(datawide, ctmodelobj,
   
  # transformedParams<-TRUE
  simpleDynamics<-FALSE
+ largeAlgebras<-TRUE
  if(nofit == TRUE) carefulFit <- FALSE
   
   n.latent<-ctmodelobj$n.latent
@@ -1030,6 +1030,8 @@ ctFit  <- function(datawide, ctmodelobj,
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
   
+  if(largeAlgebras==TRUE){
+    
    if(meanIntervals==TRUE) datawide[,paste0('dT', 1:(Tpoints-1))] <- 
     matrix(apply(datawide[,paste0('dT', 1:(Tpoints-1))],2,mean,na.rm=T), byrow=T,nrow=nrow(datawide), ncol=(Tpoints-1))
   
@@ -1203,6 +1205,180 @@ paste0(" ( II %x% II  - (discreteDRIFT_i", i, ") %x% (discreteDRIFT_i", i, ") ) 
   
   Qdalgs<-list(discreteDIFFUSIONtpoints, discreteDIFFUSIONbig, discreteDIFFUSIONallintervals)
   
+  }#end large algebras
+  
+  
+  if(largeAlgebras==FALSE){
+    if(meanIntervals==TRUE) datawide[,paste0('dT', 1:(Tpoints-1))] <- 
+        matrix(apply(datawide[,paste0('dT', 1:(Tpoints-1))],2,mean,na.rm=T), byrow=T,nrow=nrow(datawide), ncol=(Tpoints-1))
+    
+    #   uniqueintervals<-c(sort(unique(c(datawide[,paste0('dT', 1:(Tpoints-1))]))))
+    #   
+    #   intervalsi <- matrix(apply(datawide[,paste0('dT', 1:(Tpoints-1)),drop=F], 2, 
+    #     function(x) match(x, uniqueintervals)),ncol=(Tpoints-1))
+    #   colnames(intervalsi)<-paste0('intervalID_T',1:(Tpoints-1))
+    #   
+    #   if(objective != 'cov') intervalID_T<-mxMatrix(name='intervalID_T',nrow=1,ncol=(Tpoints-1), free=F,
+    #     labels=paste0('data.intervalID_T',1:(Tpoints-1)))
+    #   
+    #   if(objective == 'cov') intervalID_T<-mxMatrix(name='intervalID_T',nrow=1,ncol=(Tpoints-1), free=F,
+    #     values=intervalsi[1,])
+    #   
+    #   datawide<-cbind(datawide,intervalsi)
+    
+    ######## discreteDRIFT
+    #discreteDRIFTallintervals
+    discreteDRIFTallintervals <- list()
+    for( i in 1:(Tpoints-1)){
+      if(discreteTime==FALSE) fullAlgString <- paste0("omxExponential(DRIFT %x% data.dT", i, ")")
+      
+      if(discreteTime==TRUE) fullAlgString <- paste0("DRIFT")
+      
+      discreteDRIFTallintervals[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFT_T", i)), 
+        list(theExpression = parse(text = fullAlgString)[[1]])))
+    }
+    
+    #   #discreteDRIFTbig
+    #   partAlgString<- paste0('discreteDRIFT_i', 1:(length(uniqueintervals)),collapse=', ')
+    #   fullAlgString <- paste0('rbind(',partAlgString,')')
+    #   discreteDRIFTbig <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFTbig")), 
+    #     list(theExpression = parse(text = fullAlgString)[[1]])))
+    #   
+    #   #discreteDRIFTtpoints
+    #   discreteDRIFTtpoints <- list()
+    #   for( i in 1:(Tpoints-1)){
+    #     if(discreteTime==FALSE) fullAlgString <- paste0('discreteDRIFTbig[
+    #       ((intervalID_T[1,',i,'] -1) * nlatent + 1) : (intervalID_T[1,',i,'] * nlatent),1:nlatent]')
+    #     
+    #     if(discreteTime==TRUE) fullAlgString <- paste0("DRIFT")
+    #     
+    #     discreteDRIFTtpoints[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFT_T", i)), 
+    #       list(theExpression = parse(text = fullAlgString)[[1]])))
+    #   }
+    #   
+    #   nlatent<-mxMatrix(name='nlatent',nrow=1,ncol=1,free=F,values=n.latent)
+    
+    EXPalgs<-list(discreteDRIFTallintervals)
+    
+    
+    
+    
+    
+    
+    ######## discreteDRIFTHATCH
+    discreteDRIFTHATCHalgs <- list()
+    if(discreteTime==FALSE && asymptotes==FALSE){
+      
+      #discreteDRIFTHATCHallintervals
+      discreteDRIFTHATCHallintervals <- list()
+      for( i in 1:(Tpoints-1)){
+        fullAlgString <- paste0("omxExponential(DRIFTHATCH %x% data.dT", i, ")")
+        
+        discreteDRIFTHATCHallintervals[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFTHATCH_T", i)), 
+          list(theExpression = parse(text = fullAlgString)[[1]])))
+      }
+      
+      #     #discreteDRIFTHATCHbig
+      #     partAlgString<- paste0('discreteDRIFTHATCH_i', 1:(length(uniqueintervals)),collapse=', ')
+      #     fullAlgString <- paste0('rbind(',partAlgString,')')
+      #     discreteDRIFTHATCHbig <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFTHATCHbig")), 
+      #       list(theExpression = parse(text = fullAlgString)[[1]])))
+      #     
+      #     #discreteDRIFTHATCHtpoints
+      #     discreteDRIFTHATCHtpoints <- list()
+      #     for( i in 1:(Tpoints-1)){
+      #     fullAlgString <- paste0('discreteDRIFTHATCHbig[
+      #       ((intervalID_T[1,',i,']-1) * nlatent^2 + 1) : (intervalID_T[1,',i,'] * nlatent^2), 1:(nlatent^2)]')
+      #       
+      #       discreteDRIFTHATCHtpoints[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDRIFTHATCH_T", i)), 
+      #         list(theExpression = parse(text = fullAlgString)[[1]])))
+      #     }
+      
+      discreteDRIFTHATCHalgs<-list(discreteDRIFTHATCHallintervals)
+    }
+    
+    
+    
+    
+    
+    ######## continuous intercept
+    #discreteCINTallintervals
+    discreteCINTallintervals <- list()
+    for( i in 1:(Tpoints-1)){
+      if(discreteTime==FALSE & asymptotes==FALSE) fullAlgString <- 
+          paste0('invDRIFT %*% (discreteDRIFT_T',i, '- II) %*% CINT')
+      
+      if(discreteTime==FALSE & asymptotes==TRUE) fullAlgString <- paste0('(II - discreteDRIFT_T',i, ') %*% CINT')
+      
+      if(discreteTime==TRUE) fullAlgString <- paste0("CINT")
+      
+      discreteCINTallintervals[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteCINT_T", i)), 
+        list(theExpression = parse(text = fullAlgString)[[1]])))
+    }
+    
+    
+    #   #discreteCINTbig
+    #   partAlgString<- paste0('discreteCINT_i', 1:(length(uniqueintervals)),collapse=', ')
+    #   fullAlgString <- paste0('rbind(',partAlgString,')')
+    #   discreteCINTbig <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteCINTbig")), 
+    #     list(theExpression = parse(text = fullAlgString)[[1]])))
+    #   
+    #   #discreteCINTtpoints
+    #   discreteCINTtpoints <- list()
+    #   for( i in 1:(Tpoints-1)){
+    #     if(discreteTime==FALSE) fullAlgString <- paste0('discreteCINTbig[
+    #       ((intervalID_T[1,',i,'] -1) * nlatent + 1) : (intervalID_T[1,',i,'] * nlatent),1]')
+    #     
+    #     if(discreteTime==TRUE) fullAlgString <- paste0("CINT")
+    #     
+    #     discreteCINTtpoints[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteCINT_T", i)), 
+    #       list(theExpression = parse(text = fullAlgString)[[1]])))
+    #   }
+    
+    INTalgs<-list(discreteCINTallintervals)
+    
+    
+    
+    
+    
+    
+    ######## diffusion
+    #discreteDIFFUSIONallintervals
+    discreteDIFFUSIONallintervals <- list()
+    for( i in 1:(Tpoints-1)){
+      if(discreteTime==FALSE & asymptotes==FALSE) fullAlgString <- 
+          paste0("(invDRIFTHATCH %*% ((discreteDRIFTHATCH_T",i,")) - invDRIFTHATCH ) %*% rvectorize(DIFFUSION)") #optimize over continuous diffusion variance
+      
+      if(discreteTime==FALSE & asymptotes==TRUE) fullAlgString <- 
+          paste0(" ( II %x% II  - (discreteDRIFT_T", i, ") %x% (discreteDRIFT_T", i, ") )  %*%  cvectorize(DIFFUSION) ") 
+      
+      if(discreteTime==TRUE) fullAlgString <- paste0("DIFFUSION")
+      
+      discreteDIFFUSIONallintervals[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDIFFUSION_T", i)), 
+        list(theExpression = parse(text = fullAlgString)[[1]])))
+    }
+    
+    
+    #   #discreteDIFFUSIONbig
+    #   partAlgString<- paste0('discreteDIFFUSION_i', 1:(length(uniqueintervals)),collapse=', ')
+    #   fullAlgString <- paste0('rbind(',partAlgString,')')
+    #   discreteDIFFUSIONbig <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDIFFUSIONbig")), 
+    #     list(theExpression = parse(text = fullAlgString)[[1]])))
+    #   
+    #   #discreteDIFFUSIONtpoints
+    #   discreteDIFFUSIONtpoints <- list()
+    #   for( i in 1:(Tpoints-1)){
+    #     if(discreteTime==FALSE) fullAlgString <- paste0('discreteDIFFUSIONbig[
+    #       ((intervalID_T[1,',i,']-1) * nlatent^2 + 1) : (intervalID_T[1,',i,'] * nlatent^2), 1]')
+    #     
+    #     if(discreteTime==TRUE) fullAlgString <- paste0("DIFFUSION")
+    #     
+    #     discreteDIFFUSIONtpoints[[i]] <- eval(substitute(OpenMx::mxAlgebra(theExpression, name = paste0("discreteDIFFUSION_T", i)), 
+    #       list(theExpression = parse(text = fullAlgString)[[1]])))
+    #   }
+    
+    Qdalgs<-list(discreteDIFFUSIONallintervals)
+  }#end small algebras
   #end base algebra definition function
   
   

@@ -6,7 +6,7 @@
 \usage{
 ctFit(datawide, ctmodelobj, objective = "auto",
   stationary = c("T0TIPREDEFFECT"), optimizer = "SLSQP",
-  retryattempts = 30, iterationSummary = FALSE, carefulFit = TRUE,
+  retryattempts = 15, iterationSummary = FALSE, carefulFit = TRUE,
   showInits = FALSE, asymptotes = FALSE, meanIntervals = FALSE,
   plotOptimization = F, nofit = FALSE, discreteTime = FALSE,
   verbose = 0, useOptimizer = TRUE, omxStartValues = NULL,
@@ -77,8 +77,7 @@ Time dependent predictor type also becomes irrelevant.}
 \item{useOptimizer}{Logical. Defaults to TRUE.  Passes argument to \code{mxRun},
 useful for using custom optimizers or fitting to specified parameters.}
 
-\item{omxStartValues}{A named vector containing already transformed (e.g. \code{log(-(driftdiagonalparam))} or
-\code{log(diffusionvarianceeparam)} starting values for free parameters, as captured by
+\item{omxStartValues}{A named vector containing the raw (potentially log transformed) OpenMx starting values for free parameters, as captured by
 OpenMx function \code{omxGetParameters(ctmodelobj$mxobj)}. These values will take precedence
 over any starting values already specified using ctModel.}
 

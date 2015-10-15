@@ -58,7 +58,7 @@ plot.ctsemMultigroupFit<-function(x,group='show chooser',...){
 #'   manifestNames=c('LeisureTime', 'Happiness'), 
 #'   latentNames=c('LeisureTime', 'Happiness'), TRAITVAR="auto")
 #' traitfit <- ctFit(datawide=ctExample1, ctmodelobj=traitmodel)
-#' plot(traitfit)
+#' plot(traitfit, wait=FALSE)
 #' @export
 
 plot.ctsemFit<-function(x,resolution=50,wait=TRUE,max.time="auto",mean=TRUE,
@@ -383,8 +383,12 @@ if(ctfitobj$ctfitargs$transformedParams==FALSE) driftindices<-(mxobj$DRIFT$free=
       impulse<- DIFFUSIONstd %*% impulse
       impulseresponse<-lapply(plottimes,function(x) expm(DRIFT *x) %*% impulse)
       
+      IRylim <- c(-1,1)
+      if(max(unlist(impulseresponse)) > 1) IRylim[2] <- max(unlist(impulseresponse))
+      if(min(unlist(impulseresponse)) < -1) IRylim[1] <- min(unlist(impulseresponse))
+      
       graphics::plot(plottimes, unlist(lapply(impulseresponse,function(x) x[1] )),   type = "l", xlab = xlab, ylab = ylab, 
-        ylim=CRylim, lwd=2,col=colourvector[1], main=paste0('Expec. given obs. change on ',latentNames[coli]),...)
+        ylim=IRylim, lwd=2,col=colourvector[1], main=paste0('Expec. given obs. change on ',latentNames[coli]),...)
       graphics::legend("topright",legend=paste0(latentNames),text.col=colourvector,bty="n")
       
       if(n.latent>1) {
@@ -413,8 +417,12 @@ if(ctfitobj$ctfitargs$transformedParams==FALSE) driftindices<-(mxobj$DRIFT$free=
       impulse[coli]<-1
       impulseresponse<-lapply(plottimes,function(x) expm(DRIFT *x) %*% impulse)
       
+      IRylim <- c(-1,1)
+      if(max(unlist(impulseresponse)) > 1) IRylim[2] <- max(unlist(impulseresponse))
+      if(min(unlist(impulseresponse)) < -1) IRylim[1] <- min(unlist(impulseresponse))
+      
       graphics::plot(plottimes, unlist(lapply(impulseresponse,function(x) x[1] )),   type = "l", xlab = xlab, ylab = ylab, 
-        ylim=CRylim, lwd=2,col=colourvector[1], main=paste0('Expec. given input on ',latentNames[coli]),...)
+        ylim=IRylim, lwd=2,col=colourvector[1], main=paste0('Expec. given input on ',latentNames[coli]),...)
       graphics::legend("topright",legend=paste0(latentNames),text.col=colourvector,bty="n")
       
       if(n.latent>1) {

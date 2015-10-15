@@ -16,6 +16,9 @@
 #' If specified, all other parameters will be fixed across groups.  
 #' If left NULL, the default, all parameters are free across groups.
 #' @param showInits Displays start values prior to optimization
+#' @param omxStartValues A named vector containing the raw (potentially log transformed) OpenMx starting values for free parameters, as captured by
+#' OpenMx function \code{omxGetParameters(ctmodelobj$mxobj)}. These values will take precedence 
+#' over any starting values already specified using ctModel.
 #' @param carefulFit if TRUE, first fits the specified model with a penalised likelihood function 
 #' to encourage parameters to remain closer to 0, then
 #' fits the specified model normally, using these estimates as starting values. 
@@ -62,7 +65,7 @@
 
 
 ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=NA,
- carefulFit=FALSE,
+ carefulFit=FALSE,omxStartValues=NULL,
   retryattempts=5,showInits=FALSE,...){
 
   if(any(suppressWarnings(!is.na(as.numeric(groupings))))) stop("grouping variable must not contain purely numeric items")
@@ -418,7 +421,11 @@ ctMultigroupFit<-function(datawide,groupings,ctmodelobj,fixedmodel=NA,freemodel=
 
     # if(!is.null(confidenceintervals)) fullmodel <- OpenMx::mxModel(fullmodel, mxCI(confidenceintervals,interval = 0.95,type = "both")) #if 95% confidence intervals are to be calculated
 
-      fullmodel<-OpenMx::mxTryHard(fullmodel,initialTolerance=1e-14,
+    if(!is.null(omxStartValues)) fullmodel<-omxSetParameters(fullmodel,
+      labels=names(omxStartValues)[names(omxStartValues) %in% names(omxGetParameters(fullmodel))],
+      values=omxStartValues[names(omxStartValues) %in% names(omxGetParameters(fullmodel))],strict=FALSE)
+    
+      fullmodel<-OpenMx::mxTryHard(fullmodel,initialTolerance=1e-16,
       showInits=showInits,
       bestInitsOutput=FALSE,
       extraTries=retryattempts,loc=1,scale=.2,paste=FALSE,...) 

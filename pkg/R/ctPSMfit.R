@@ -10,7 +10,7 @@
 #'
 #' @return PSM fit data
 #' @examples 
-#' generatingModel <- ctModel(n.latent = 1, n.manifest = 1, Tpoints = 30,
+#' generatingModel <- ctModel(n.latent = 1, n.manifest = 1, Tpoints = 10,
 #' LAMBDA = diag(1), DRIFT = matrix(-.3, nrow = 1),
 #' MANIFESTVAR = diag(1),
 #' CINT = matrix(3, 1, 1),
@@ -19,7 +19,7 @@
 #' dat <- ctGenerate(generatingModel, n.subjects=10, burnin=300)
 #' 
 #' ### ctsem model and fit
-#' ctsemModel <- ctModel(n.latent=1, n.manifest = 1, Tpoints = 30,
+#' ctsemModel <- ctModel(n.latent=1, n.manifest = 1, Tpoints = 10,
 #'   LAMBDA = diag(1))
 #' ctsemFit <- ctFit(dat, ctsemModel, stationary = c('T0VAR'))
 #' 
@@ -86,7 +86,7 @@ ctPSMfit<-function(datawide,ctmodelobj,omxStartValues=NULL, ...){
   flatcm<-unlist(ctmodelobj[-which(names(ctmodelobj) %in% c('latentNames', 'manifestNames', 'T0VAR'))])
   flatcm<-flatcm[-suppressWarnings(which(!is.na(as.numeric(flatcm))))]
   names(flatcm)<-flatcm
-  inits<-unlist(lapply(flatcm, function(x) rnorm(1,.3,.01)))
+  inits<-unlist(lapply(flatcm, function(x) stats::rnorm(1,.3,.01)))
   if(!is.null(omxStartValues)) {
     nameMatch<-names(inits)[which(names(inits) %in% names(omxStartValues))] 
     inits<- omxStartValues[nameMatch]

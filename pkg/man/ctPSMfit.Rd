@@ -23,7 +23,7 @@ PSM fit data
 Fits a specified ctsem model (without predictors) using the PSM package.
 }
 \examples{
-generatingModel <- ctModel(n.latent = 1, n.manifest = 1, Tpoints = 30,
+generatingModel <- ctModel(n.latent = 1, n.manifest = 1, Tpoints = 10,
 LAMBDA = diag(1), DRIFT = matrix(-.3, nrow = 1),
 MANIFESTVAR = diag(1),
 CINT = matrix(3, 1, 1),
@@ -32,7 +32,7 @@ DIFFUSION = t(chol(diag(5, 1))))
 dat <- ctGenerate(generatingModel, n.subjects=10, burnin=300)
 
 ### ctsem model and fit
-ctsemModel <- ctModel(n.latent=1, n.manifest = 1, Tpoints = 30,
+ctsemModel <- ctModel(n.latent=1, n.manifest = 1, Tpoints = 10,
   LAMBDA = diag(1))
 ctsemFit <- ctFit(dat, ctsemModel, stationary = c('T0VAR'))
 

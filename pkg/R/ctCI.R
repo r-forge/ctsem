@@ -11,17 +11,17 @@
 #' The necessary group prefixes are added internally.
 #' 
 #' @examples
-#' data('ctExample1')
+#'data("ctExample3")
+#'model <- ctModel(n.latent = 1, n.manifest = 3, Tpoints = 100, 
+#'  LAMBDA = matrix(c(1, "lambda2", "lambda3"), nrow = 3, ncol = 1), 
+#'  MANIFESTMEANS = matrix(c(0, "manifestmean2", "manifestmean3"), nrow = 3, 
+#'    ncol = 1))
+#'fit <- ctFit(data = ctExample3, ctmodelobj = model, objective = "Kalman",
+#'  stationary = c("T0VAR"))
 #' 
-#' example1model <- ctModel(n.latent = 2, n.manifest = 2, Tpoints = 6, 
-#'   manifestNames = c('LeisureTime', 'Happiness'), 
-#'   latentNames = c('LeisureTime', 'Happiness'), LAMBDA = diag(2))
-#'   
-#' example1fit <- ctFit(datawide = ctExample1, ctmodelobj = example1model)
+#'fit <- ctCI(fit, confidenceintervals = 'DRIFT')
 #' 
-#' example1cifit <- ctCI(example1fit, confidenceintervals = 'DRIFT')
-#' 
-#` summary(example1cifit)$confidenceIntervals
+#` summary(fit)$confidenceIntervals
 #' @export
 ctCI<-function(ctfitobj, confidenceintervals, optimizer='NPSOL', verbose=0){
   

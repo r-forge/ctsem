@@ -5,8 +5,8 @@
 \title{Fits a multiple group continuous time model.}
 \usage{
 ctMultigroupFit(datawide, groupings, ctmodelobj, fixedmodel = NA,
-  freemodel = NA, carefulFit = FALSE, retryattempts = 5,
-  showInits = FALSE, ...)
+  freemodel = NA, carefulFit = FALSE, omxStartValues = NULL,
+  retryattempts = 5, showInits = FALSE, ...)
 }
 \arguments{
 \item{datawide}{Wide format data, as used in \code{\link{ctFit}}.  See \code{\link{ctLongToWide}} to
@@ -30,6 +30,10 @@ If left NULL, the default, all parameters are free across groups.}
 to encourage parameters to remain closer to 0, then
 fits the specified model normally, using these estimates as starting values.
 Can help with optimization in some cases, though results in user specified inits being ignored for the final fit.}
+
+\item{omxStartValues}{A named vector containing the raw (potentially log transformed) OpenMx starting values for free parameters, as captured by
+OpenMx function \code{omxGetParameters(ctmodelobj$mxobj)}. These values will take precedence
+over any starting values already specified using ctModel.}
 
 \item{retryattempts}{Number of fit retries to make.}
 
